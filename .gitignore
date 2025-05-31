@@ -1,14 +1,29 @@
-# Entornos virtuales
+# Entorno virtual
 .venv/
 
-# Archivos de Python generados
+# Archivos temporales
+.ipynb_checkpoints/
+
+# Python cache
 __pycache__/
 *.pyc
 
 # Archivos ocultos del sistema
 .DS_Store
 
-# Variables de entorno
+# Claves o configuración sensible
 .env
+*.env
 
+# Ignorar todos los CSV excepto estos dos
+data/*.csv
+!data/estaciones_filtradas.csv
+!data/temperaturas_historicas_ampliadas.csv
+
+# Ignorar notebooks excepto el bueno
+notebooks/*.ipynb
+!notebooks/Extracción y limpieza.ipynb
+
+# Carpeta innecesaria
+data/historico/
 
