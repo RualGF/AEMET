@@ -1,0 +1,14 @@
+# Entornos virtuales
+.venv/
+
+# Archivos de Python generados
+__pycache__/
+*.pyc
+
+# Archivos ocultos del sistema
+.DS_Store
+
+# Variables de entorno
+.env
+
+
