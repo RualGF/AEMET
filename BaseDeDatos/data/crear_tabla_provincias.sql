@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS provincias (
-    codigo_ine SMALLINT UNSIGNED PRIMARY KEY,
+    codigo_ine TINYINT UNSIGNED PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL,
-    codigo_comunidad SMALLINT UNSIGNED NOT NULL,
+    codigo_comunidad TINYINT UNSIGNED NOT NULL,
     FOREIGN KEY (codigo_comunidad) REFERENCES comunidades_autonomas(codigo_ine)
 );
 

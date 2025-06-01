@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS comunidades_autonomas (
-    codigo_ine SMALLINT UNSIGNED PRIMARY KEY,
+    codigo_ine TINYINT UNSIGNED PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL  
 );
 
