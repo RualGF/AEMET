@@ -1,11 +1,11 @@
 CREATE TABLE IF NOT EXISTS provincias (
-    codigo_ine TINYINT UNSIGNED PRIMARY KEY,
+    codigo_prov TINYINT UNSIGNED PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL,
-    codigo_comunidad TINYINT UNSIGNED NOT NULL,
-    FOREIGN KEY (codigo_comunidad) REFERENCES comunidades_autonomas(codigo_ine)
+    codigo_ca TINYINT UNSIGNED NOT NULL,
+    FOREIGN KEY (codigo_ca) REFERENCES comunidades(codigo_ca)
 );
 
-INSERT INTO provincias (codigo_ine, nombre, codigo_comunidad) VALUES
+INSERT INTO provincias (codigo_prov, nombre, codigo_ca) VALUES
 ('01', 'Araba/Álava', '16'),
 ('02', 'Albacete', '08'),
 ('03', 'Alicante/Alacant', '10'),
@@ -61,10 +61,10 @@ INSERT INTO provincias (codigo_ine, nombre, codigo_comunidad) VALUES
 
 SELECT
     p.nombre AS provincia,
-    c.nombre AS comunidad_autonoma
+    c.nombre AS comunidad
 FROM
     provincias p
 JOIN
-    comunidades_autonomas c ON p.codigo_comunidad = c.codigo_ine
+    comunidades c ON p.codigo_ca = c.codigo_ca
 ORDER BY
     p.nombre;
