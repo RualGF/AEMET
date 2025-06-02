@@ -1,9 +1,9 @@
-CREATE TABLE IF NOT EXISTS comunidades_autonomas (
-    codigo_ine TINYINT UNSIGNED PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS comunidades (
+    codigo_ca TINYINT UNSIGNED PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL  
 );
 
-INSERT INTO comunidades_autonomas (codigo_ine, nombre) VALUES
+INSERT INTO comunidades(codigo_ca, nombre) VALUES
 ('01', 'Andalucía'),
 ('02', 'Aragón'),
 ('03', 'Asturias, Principado de'),
@@ -24,4 +24,4 @@ INSERT INTO comunidades_autonomas (codigo_ine, nombre) VALUES
 ('18', 'Ceuta'),
 ('19', 'Melilla');
 
-select * from comunidades_autonomas ;
+select * from comunidades ;
