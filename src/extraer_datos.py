@@ -1,14 +1,12 @@
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-# Configuración de la conexión a la base de datos
-usuario = "root"
-pw = "s41nt"
-bd = "aemet"
+import conectar
+
 
 # Cadena de conexión para MySQL usando PyMySQL
 try:
-    motor = create_engine(f"mysql+pymysql://{usuario}:{pw}@localhost/{bd}")
+    motor = conectar.conexion()
     print("Conexión a la base de datos establecida correctamente.")
 except Exception as e:
     print(f"Error al conectar a la base de datos: {e}")
@@ -16,7 +14,7 @@ except Exception as e:
 
 
 # Función para ejecutar una consulta y obtener un DataFrame
-def ejecutar_query_a_dataframe(query_sql: str) -> pd.DataFrame:
+def ejecutar_query_a_dataframe(consulta_recibida: str) -> pd.DataFrame:
     """
     Ejecuta una consulta SQL en la base de datos y devuelve los resultados en un DataFrame de pandas.
 
@@ -28,24 +26,47 @@ def ejecutar_query_a_dataframe(query_sql: str) -> pd.DataFrame:
                       Devuelve un DataFrame vacío si no hay resultados o si ocurre un error.
     """
     try:
-        with motor.connect() as conexion:
-            df_resultado = pd.read_sql(text(query_sql), conexion)
-            print(
-                f"\nConsulta ejecutada con éxito. Se recuperaron {len(df_resultado)} filas."
-            )
-            return df_resultado
+        df_resultado = pd.read_sql(text(consulta_recibida), motor)
+        print(
+            f"\nConsulta ejecutada con éxito. Se recuperaron {len(df_resultado)} filas."
+        )
+        return df_resultado
     except Exception as e:
-        print(f"Error al ejecutar la consulta:\n{query_sql}\nError: {e}")
+        print(f"Error al ejecutar la consulta:\n{consulta_recibida}\nError: {e}")
         return pd.DataFrame()  # Devuelve un DataFrame vacío en caso de error
 
 
 # Ejemplos de Queries (Consultas)
+def armar_consulta(params: dict):
+    """
+    Armado de consulta con parámetros recibidos de streamlit
+    """
+    consulta = """
+    SELECT
+        fecha,
+        indicativo,
+        tmed
+    FROM
+        datos_meteorologicos_table
+    WHERE
+        fecha = %(fecha)s
+    ORDER BY
+        indicativo;
+    """
+    try:
+        # 'motor' es la conexión global establecida en extraer_datos.py
+        df_resultado = pd.read_sql(text(consulta), motor, params=params)
+        print(f"Consulta parametrizada ejecutada. Filas: {len(df_resultado)}")
+        return df_resultado
+    except Exception as e:
+        print(f"Error al ejecutar la consulta parametrizada: {consulta} con params {params}. Error: {e}")
+        return pd.DataFrame()
 
 # Ejemplo 1: Seleccionar todas las columnas de la tabla datos_meteorologicos
 print("\n--- Ejemplo 1: Seleccionar las primeras 5 filas de datos_meteorologicos ---")
 query_1 = """
 SELECT *
-FROM datos_meteorologicos
+FROM datos_meteorologicos_table
 LIMIT 5;
 """
 df_ejemplo_1 = ejecutar_query_a_dataframe(query_1)
@@ -57,14 +78,14 @@ print("\n--- Ejemplo 2: Temperatura media por estación para el '2023-01-15' ---
 query_2 = """
 SELECT
     fecha,
-    nombre_estacion,
-    temperatura_media
+    indicativo,
+    tmed
 FROM
-    datos_meteorologicos
+    datos_meteorologicos_table
 WHERE
-    fecha = '2023-01-15'
+    fecha = '2024-01-20'
 ORDER BY
-    nombre_estacion;
+    indicativo;
 """
 df_ejemplo_2 = ejecutar_query_a_dataframe(query_2)
 if not df_ejemplo_2.empty:
@@ -75,11 +96,11 @@ print("\n--- Ejemplo 3: Conteo de registros por provincia (últimos 10) ---")
 query_3 = """
 SELECT
     p.nombre AS nombre_provincia,
-    COUNT(dm.codigo_provincia) AS total_registros
+    COUNT(dm.provincia) AS total_registros
 FROM
-    datos_meteorologicos AS dm
+    datos_meteorologicos_table AS dm
 JOIN
-    provincias AS p ON dm.codigo_provincia = p.codigo_ine
+    provincias AS p ON dm.provincia = p.nombre
 GROUP BY
     p.nombre
 ORDER BY
@@ -94,14 +115,14 @@ if not df_ejemplo_3.empty:
 print("\n--- Ejemplo 4: Estaciones con la temperatura máxima más alta (ejemplo) ---")
 query_4 = """
 SELECT
-    nombre_estacion,
-    MAX(temperatura_maxima) AS temp_max_historica
+    nombre,
+    MAX(cast(tmax AS DECIMAL)) AS temp_max_historica
 FROM
-    datos_meteorologicos
+    datos_meteorologicos_table
 WHERE
-    temperatura_maxima IS NOT NULL
+    tmax IS NOT NULL
 GROUP BY
-    nombre_estacion
+    nombre
 ORDER BY
     temp_max_historica DESC
 LIMIT 5;

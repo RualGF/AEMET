@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, insert, table
 
 import conectar
 
-df = pd.read_csv(r".\data\temperaturas_historicas_ampliadas.csv")
+df = pd.read_csv(r".\data\temperaturas_limpias.csv")
 
 valores_insertar = {}
 for col in df.columns:
