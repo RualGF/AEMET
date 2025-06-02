@@ -1,4 +1,4 @@
 # Created by venv; see https://docs.python.org/3/library/venv.html
-.entorno/
+.entorno/*
 # Archivos de secretos de Streamlit
 .streamlit/secrets.toml
