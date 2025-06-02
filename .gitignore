@@ -23,6 +23,8 @@ data/*.csv
 # Ignorar notebooks excepto el bueno
 notebooks/*.ipynb
 !notebooks/Extracción y limpieza.ipynb
+!notebooks/Extraccion punto 1.ipynb
+
 
 # Carpeta innecesaria
 data/historico/
