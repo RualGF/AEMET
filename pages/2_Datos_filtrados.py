@@ -8,24 +8,11 @@ from src import conectar
 def main():
     conexion = conectar.conexion()
 
-
-    st.set_page_config(
-        page_title="Ex-stream-ly Cool App",
-        page_icon="🧊",
-        layout="wide",
-        initial_sidebar_state="expanded",
-        menu_items={
-            "Get Help": "https://www.extremelycoolapp.com/help",
-            "Report a bug": "https://www.extremelycoolapp.com/bug",
-            "About": "# This is a header. This is an *extremely* cool app!",
-        },
-    )
-
-    st.title("Predicciones meteorológicas")
+    st.title("Datos meteorológicos filtrados")
     st.divider()
 
     df_provincias = pd.read_sql_table("provincias", conexion)
-    df_comunidades = pd.read_sql_table("comunidades_autonomas", conexion)
+    df_comunidades = pd.read_sql_table("comunidades", conexion)
 
     fecha = st.date_input(
         "Selecciona una fecha:",
@@ -47,8 +34,8 @@ def main():
     if opcion_comunidad:
         comunidad_elegida = df_comunidades[df_comunidades["nombre"] == opcion_comunidad]
 
-        provincias_filtradas = df_provincias[df_provincias["codigo_comunidad"] == comunidad_elegida["codigo_ine"].iloc[0]]
-        opcion_elegida = st.sidebar.multiselect(
+        provincias_filtradas = df_provincias[df_provincias["codigo_ca"] == comunidad_elegida["codigo_ca"].iloc[0]]
+        opcion_elegida = st.multiselect(
             "Elige la provincia: ",
             provincias_filtradas["nombre"],
             default=None,
@@ -56,7 +43,7 @@ def main():
         )
     else:
         #opcion_elegida = None
-        opcion_elegida = st.sidebar.multiselect(
+        opcion_elegida = st.multiselect(
         "Elige la provincia: ",
         df_provincias["nombre"],
         default=None,
