@@ -11,19 +11,35 @@ def main():
     st.divider()
 
     with st.spinner("Cargando datos históricos... Por favor, espera."):
-        df = pd.read_sql_query(
-            "SELECT provincia, " \
-            "AVG(altitud) AS 'Altitud media (m)', " \
-            "AVG(tmed) AS 'Temperatura media (ºC)', " \
-            "AVG(tmin) AS 'Temperatura mínima (ºC)', " \
-            "AVG(tmax) AS 'Temperatura máxima (ºC)', " \
-            "AVG(prec) AS 'Precipitación (mm)', " \
-            "AVG(racha) AS 'Velocidad del viento (km/h)', " \
-            "AVG(hrMedia) AS 'Humedad relativa media' " \
-            "FROM datos_meteorologicos_table " \
-            "GROUP BY provincia", 
-            con = conexion)
-    
-    st.dataframe(df, hide_index=True, use_container_width=True)
+        
+        consulta = """
+            SELECT p.nombre, 
+            d.codigo_prov,
+            AVG(d.altitud), 
+            AVG(d.tmed),
+            AVG(d.tmin),
+            AVG(d.tmax),
+            AVG(d.prec),
+            AVG(d.racha) * 3.6,
+            AVG(d.hrMedia)
+            FROM datos_meteorologicos as d, provincias as p
+            WHERE d.codigo_prov = p.codigo_prov
+            GROUP BY codigo_prov ; 
+            """
+        df = pd.read_sql_query(consulta, con = conexion)   
+        df.style.format(na_rep="Sin datos", decimal=",", thousands=".", precision=2) 
+        st.divider()
+     
+    st.dataframe(df, hide_index=True, use_container_width=True, column_config={
+        "nombre": st.column_config.TextColumn("Nombre de la provincia"),
+        "codigo_prov": None,
+        "AVG(d.altitud)": st.column_config.NumberColumn(label="Altitud media (m)"),
+        "AVG(d.tmed)": st.column_config.NumberColumn(label="Temp. media (ºC)", help="Temperatura media"),
+        "AVG(d.tmin)": st.column_config.NumberColumn(label="Temp. mínima (ºC)", help="Temperatura mínima"),
+        "AVG(d.tmax)": st.column_config.NumberColumn(label="Temp. máxima (ºC)", help="Temperatura máxima"),
+        "AVG(d.prec)": st.column_config.NumberColumn(label="Precip. media (mm)", help="Precipitación media"),
+        "AVG(d.racha) * 3.6": st.column_config.NumberColumn(label="Racha media (km/h)", help="Velocidad media del viento"),
+        "AVG(d.hrMedia)": st.column_config.NumberColumn(label="Humedad media (%)", help="Humedad relativa media")
+    } )
 if __name__ == "__main__":
     main()
