@@ -8,8 +8,8 @@
 .ipynb_checkpoints/
 
 # Python cache
-__pycache__/
-*.pyc
+src/__pycache__/
+src/*.pyc
 
 # Archivos ocultos del sistema
 .DS_Store
@@ -26,6 +26,3 @@ data/*.csv
 # Ignorar notebooks excepto el bueno
 notebooks/*.ipynb
 !notebooks/Extracción y limpieza.ipynb
-
-# Carpeta innecesaria
-data/historico/
