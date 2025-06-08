@@ -28,6 +28,7 @@ src/*.pyc
 data/*.csv
 !data/estaciones_filtradas.csv
 !data/temperaturas_historicas_ampliadas.csv
+data/spain-provinces.geojson
 
 # Ignorar notebooks excepto el bueno
 notebooks/*.ipynb

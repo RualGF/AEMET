@@ -1,9 +1,11 @@
 import pandas as pd
 import streamlit as st
+import plotly.express as px
 from datetime import date
-from src.extraer_datos import ejecutar_consulta_a_dataframe
 
-from src import conectar 
+from src.extraer_datos import ejecutar_consulta_a_dataframe
+from src.coroplet import dibujar_coropletico
+from src import conectar
 
 def main():
     conexion = conectar.conexion()
@@ -14,7 +16,7 @@ def main():
     df_provincias = pd.read_sql_table("provincias", conexion)
     df_comunidades = pd.read_sql_table("comunidades", conexion)
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         fecha = st.date_input(
             "Selecciona una fecha:",
@@ -53,15 +55,30 @@ def main():
                 default=None,
                 placeholder="Elige las provincias que quieras ver"
                 )
-    st.sidebar.divider()
-
-    # if opcion_provincia:
+    
+       # if opcion_provincia:
     #     st.sidebar.write(opcion_provincia)
     #     st.dataframe(df_provincias[df_provincias["nombre"].isin(opcion_provincia)], hide_index=True)
 
     with st.spinner("Cargando datos históricos... Por favor, espera."):
         
         df = ejecutar_consulta_a_dataframe()
+    
+    with col4:
+        metricas_disponibles = {
+            "Altitud media (m)": {"original_col": "AVG(d.altitud)", "new_col": "altitud", "unidad": "m"},
+            "Temp. media (ºC)": {"original_col": "AVG(d.tmed)", "new_col": "tmed", "unidad": "ºC"},
+            "Temp. mínima (ºC)": {"original_col": "AVG(d.tmin)", "new_col": "tmin", "unidad": "ºC"},
+            "Temp. máxima (ºC)": {"original_col": "AVG(d.tmax)", "new_col": "tmax", "unidad": "ºC"},
+            "Precip. media (mm)": {"original_col": "AVG(d.prec)", "new_col": "prec", "unidad": "mm"},
+            "Racha media (km/h)": {"original_col": "AVG(d.racha) * 3.6", "new_col": "racha", "unidad": "km/h"},
+            "Humedad media (%)": {"original_col": "AVG(d.hrMedia)", "new_col": "hrMedia", "unidad": "%"},
+        }
+        metrica_seleccionada = st.selectbox(
+            "Selecciona la métrica a visualizar en el mapa:",
+            metricas_disponibles,
+            index=0 # Por defecto selecciona la primera métrica
+        )
 
     if fecha and len(fecha) == 2:
         parametros = {
@@ -69,18 +86,27 @@ def main():
             "fecha_fin": fecha[1]
             }
         df = ejecutar_consulta_a_dataframe(params=parametros)
+        fecha_inicio_str = fecha[0].strftime("%d/%m/%Y")
+        fecha_fin_str = fecha[1].strftime("%d/%m/%Y")
+        titulo_mapa = f"Promedio de {metrica_seleccionada} por provincia seleccionada desde {fecha_inicio_str} hasta {fecha_fin_str}"
 
     elif fecha and len(fecha) == 1:
         parametros = {
             "fecha": fecha[0],
             }
         df = ejecutar_consulta_a_dataframe(params=parametros)
+        fecha_str = fecha[0].strftime("%d/%m/%Y")
+        titulo_mapa = f"Promedio de {metrica_seleccionada} por provincia seleccionada en {fecha_str}"
     else:
         st.write("No se ha seleccionado ninguna fecha.")
+        titulo_mapa = f"Promedio de {metrica_seleccionada} por provincia seleccionada"
 
     if opcion_provincia:
         df = df[df["nombre"].isin(opcion_provincia)]
-        
+
+    
+    st.divider()
+
     st.dataframe(df, hide_index=True, use_container_width=True, column_config={
         "nombre": st.column_config.TextColumn("Nombre de la provincia"),
         "codigo_prov": None,
@@ -92,6 +118,32 @@ def main():
         "AVG(d.racha) * 3.6": st.column_config.NumberColumn(label="Racha media (km/h)", format="%.2f", help="Velocidad media del viento"),
         "AVG(d.hrMedia)": st.column_config.NumberColumn(label="Humedad media (%)", format="%.2f", help="Humedad relativa media")
     } )
+
+    st.divider()
+
+    if metrica_seleccionada:
+        
+    # Construir diccionario {columna_original: nueva_columna} para renombrar
+        renombrar_columnas = {
+        v["original_col"]: v["new_col"]
+        for v in metricas_disponibles.values()
+        }
+        # Renombrar todas las columnas en el DataFrame
+        
+        df = df.rename(columns=renombrar_columnas)
+
+        columna_seleccionada = metricas_disponibles[metrica_seleccionada]["new_col"]
+        
+        fig_mapa = dibujar_coropletico(
+            df,
+            columna_seleccionada,
+            titulo_mapa,
+            f"{metrica_seleccionada}" # Etiqueta de la leyenda
+        )
+        st.pyplot(fig_mapa) # Muestra la figura de Matplotlib en Streamlit
+    else:
+        st.info("Selecciona una métrica para mostrar el mapa.")
+
 
 
 if __name__ == "__main__":
