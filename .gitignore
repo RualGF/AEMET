@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Entorno virtual
 .venv/
 
@@ -28,4 +29,22 @@ notebooks/*.ipynb
 
 # Carpeta innecesaria
 data/historico/
+=======
+# macOS
+.DS_Store
+
+# Entornos virtuales y variables de entorno
+.env
+.venv/
+venv/
+
+# Checkpoints de Jupyter
+.ipynb_checkpoints/
+
+# Caché de Python
+__pycache__/
+
+# El .DS_Store que puede caer en notebooks/
+notebooks/.DS_Store
+>>>>>>> Jorge
 
