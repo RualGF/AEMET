@@ -12,11 +12,11 @@ def get_base64_of_bin_file(bin_file):
         return None
 
 def main():
-    # Get base64 strings for images
+    # base64 strings para imágenes
     background_b64 = get_base64_of_bin_file("images/background.jpg")
-    logo_b64 = get_base64_of_bin_file("images/descarga.png")
+    logo_b64 = get_base64_of_bin_file("images/aemet.png")
     
-    # Apply CSS for background image, white text, and AEMET logo
+    # Aplicar CSS para imagen de fondo, letras, y logo de AEMET
     css_style = """
         <style>
         /* Hide sidebar completely */
@@ -45,7 +45,7 @@ def main():
         }
         """
     
-    # Add background if available
+    # Agregar fondo
     if background_b64:
         css_style += f"""
         .stApp {{
@@ -56,7 +56,7 @@ def main():
         }}
         """
     
-    # Add logo styling if available
+    # Agregar logo
     if logo_b64:
         css_style += f"""
         .aemet-logo {{
@@ -105,7 +105,7 @@ def main():
     
     st.markdown(css_style, unsafe_allow_html=True)
 
-    # Add the small AEMET logo in the top-right corner if available
+    # Agregar el logo pequeño de aemet
     if logo_b64:
         st.markdown(
             f'<img src="data:image/png;base64,{logo_b64}" class="aemet-logo">',
@@ -163,17 +163,14 @@ def main():
     - Interfaz responsive
     """)
 
-    # Fallback: Show logo at bottom if files aren't found
-    logo_path = "images/descarga.png"
+    # Fallback: Mostrar logo al fondo directamente desde la página de aemet.
+    logo_path = "images/aemet.png"
     if not logo_b64 and os.path.exists(logo_path):
         st.image(logo_path, caption="Logo AEMET", width=200)
     elif not logo_b64:
         st.image("https://www.aemet.es/imagenes_en/cabecera/logo_aemet_128.png", 
                 caption="Logo AEMET", width=200)
 
-# Button to return to the home page
-if st.button("Volver a Inicio", key="volver_inicio"):
-    st.switch_page("inicio.py")
 
 if __name__ == "__main__":
     main()
