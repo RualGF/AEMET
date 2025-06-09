@@ -1,14 +1,15 @@
 import pandas as pd
 import streamlit as st
-import plotly.express as px
 from datetime import date
 
 from src.extraer_datos import ejecutar_consulta_a_dataframe
-from src.coroplet import dibujar_coropletico
+from src.coroplet import dibujar_coropletico, dibujar_coropletico_plotly
 from src import conectar
+from src.personalizacion import load_css
 
 def main():
     conexion = conectar.conexion()
+    load_css('src/estilos.css')
 
     st.title("Datos meteorológicos filtrados")
     st.divider()
@@ -134,16 +135,23 @@ def main():
 
         columna_seleccionada = metricas_disponibles[metrica_seleccionada]["new_col"]
         
-        fig_mapa = dibujar_coropletico(
+        fig = dibujar_coropletico(
             df,
             columna_seleccionada,
             titulo_mapa,
             f"{metrica_seleccionada}" # Etiqueta de la leyenda
         )
-        st.pyplot(fig_mapa) # Muestra la figura de Matplotlib en Streamlit
+        st.pyplot(fig, use_container_width=True) # Muestra la figura de Matplotlib en Streamlit
+        
+        # fig_px = dibujar_coropletico_plotly(
+        #     df,
+        #     columna_seleccionada,
+        #     titulo_mapa,
+        #     f"{metrica_seleccionada}"
+        # )
+        # st.plotly_chart(fig_px, use_container_width=True) # Muestra la figura de Plotly en Streamlit
     else:
         st.info("Selecciona una métrica para mostrar el mapa.")
-
 
 
 if __name__ == "__main__":
