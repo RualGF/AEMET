@@ -1,3 +1,4 @@
+<<<<<<< HEAD
  HEAD
  HEAD
 # Entorno virtual
@@ -62,3 +63,6 @@ notebooks/.DS_Store
 !notebooks/Extracción y limpieza.ipynb
 >>>>>>> origin/main
 
+=======
+.entorno/
+>>>>>>> Augusto
