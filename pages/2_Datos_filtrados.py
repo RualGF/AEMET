@@ -159,7 +159,11 @@ def main():
         # st.plotly_chart(fig_px, use_container_width=True) # Muestra la figura de Plotly en Streamlit
     else:
         st.info("Selecciona una métrica para mostrar el mapa.")
-
+    
+    # Agregar Botón de inicio
+    st.divider()
+    if st.button("Volver a Inicio", key="volver_inicio"):
+        st.switch_page("Inicio.py")
 
 if __name__ == "__main__":
     main()
