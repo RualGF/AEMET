@@ -8,7 +8,7 @@ Este proyecto es una aplicación web desarrollada con Streamlit que permite visu
 - `main/Inicio.py`: Página de inicio de la app.
 - `/pages/1_Datos_historicos.py`: Página estadística descriptiva temperatura.
 - `/pages/2_Datos_filtrados.py`: Página datos filtrados por métrica, provincia y fecha.
-- `/pages/3_Datos_filtrados.py`: Página de predicciónes temperatura media.
+- `/pages/3_Predicciones.py`: Página de predicciónes temperatura media.
 - `/src/conectar.py`: Lógica de conexión MySQL.
 - `/src/popular.py`: Carga de datos MySQL.
 - `/src/extraer_datos.py`: Queries MySQL.
