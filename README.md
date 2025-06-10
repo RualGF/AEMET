@@ -17,8 +17,8 @@ Este proyecto es una aplicación web desarrollada con Streamlit que permite visu
 - `/notebooks`: Bitácora de Extracción y Limpieza (no ejecutar)
 
 ## Instalación
-1. Crear un entorno virtual : `python -m venv venv`
-2. Activar el entorno virtual: en Windows `venv\Scripts\activate` en macOS/Linux `venv/bin/activate`
+1. Crear un entorno virtual : `python -m venv .entorno`
+2. Activar el entorno virtual: en Windows `.entorno\Scripts\activate` en macOS/Linux `.entorno/bin/activate`
 3. Instalar dependencias: `pip install -r requirements.txt`
 4. Ejecutar: `streamlit run ./Inicio.py`
 
