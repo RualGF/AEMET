@@ -160,6 +160,10 @@ def main():
     else:
         st.info("Selecciona una métrica para mostrar el mapa.")
 
+    # Agregar Botón de inicio
+    st.divider()
+    if st.button("Volver a Inicio", key="volver_inicio"):
+        st.switch_page("Inicio.py")
 
 if __name__ == "__main__":
     main()

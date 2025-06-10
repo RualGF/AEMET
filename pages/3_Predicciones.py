@@ -15,5 +15,10 @@ def main():
     # st.write(st.context.cookies)
     # st.write(st.context.headers)
     st.write("Por hacer")
+
+    # Agregar Botón de inicio
+    st.divider()
+    if st.button("Volver a Inicio", key="volver_inicio"):
+        st.switch_page("Inicio.py")
 if __name__ == "__main__":
     main()
