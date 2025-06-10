@@ -312,11 +312,57 @@ def main():
                     resumen, resumen_mensual = calculate_statistics(analyzed_df.copy())
                         
                     st.write("**Estadísticas por Año:**")
-                    st.dataframe(resumen, use_container_width=True)
+                    # Configuration for yearly statistics dataframe
+                    yearly_column_config = {}
+                    for col in resumen.columns:
+                        if col.startswith('Variación'):
+                            yearly_column_config[col] = st.column_config.NumberColumn(
+                                label=col, 
+                                format="%.2f", 
+                                help="Diferencia de temperatura entre años (°C)"
+                            )
+                        elif col in ['2023', '2024', 'Total']:
+                            yearly_column_config[col] = st.column_config.NumberColumn(
+                                label=f"Año {col}" if col != 'Total' else col, 
+                                format="%.2f", 
+                                help="Estadísticas de temperatura (°C)"
+                            )
+                    
+                    st.dataframe(resumen, use_container_width=True, column_config=yearly_column_config)
                         
                     if resumen_mensual is not None:
                         st.write("**Estadísticas Mensuales por Año:**")
-                        st.dataframe(resumen_mensual, use_container_width=True)
+                        # Configuration for monthly statistics dataframe
+                        monthly_column_config = {}
+                        for col in resumen_mensual.columns:
+                            if 'Variación' in col:
+                                monthly_column_config[col] = st.column_config.NumberColumn(
+                                    label=col.replace('_', ' '), 
+                                    format="%.2f", 
+                                    help="Diferencia mensual de temperatura entre años (°C)"
+                                )
+                            elif any(stat in col for stat in ['mean', 'std', 'min', '25%', '50%', '75%', 'max']):
+                                year = col.split('_')[-1] if '_' in col else ''
+                                stat_name = col.split('_')[0] if '_' in col else col
+                                stat_labels = {
+                                    'mean': 'Media', 'std': 'Desv. Est.', 'min': 'Mínimo',
+                                    '25%': 'Q1', '50%': 'Mediana', '75%': 'Q3', 'max': 'Máximo'
+                                }
+                                label = f"{stat_labels.get(stat_name, stat_name)} {year}".strip()
+                                monthly_column_config[col] = st.column_config.NumberColumn(
+                                    label=label, 
+                                    format="%.2f", 
+                                    help=f"Estadística mensual de temperatura para {year} (°C)"
+                                )
+                            elif 'count' in col:
+                                year = col.split('_')[-1] if '_' in col else ''
+                                monthly_column_config[col] = st.column_config.NumberColumn(
+                                    label=f"Conteo {year}".strip(), 
+                                    format="%.0f", 
+                                    help="Número de días con datos"
+                                )
+                        
+                        st.dataframe(resumen_mensual, use_container_width=True, column_config=monthly_column_config)
                         
                         st.subheader("Resumen de Outliers")
                         datos = analyzed_df['tmed'].dropna()
