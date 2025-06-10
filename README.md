@@ -37,4 +37,3 @@ Navega entre las páginas de la aplicación para:
 Configura la conexión a MySQL en /src/conectar.py con las credenciales de tu servidor MySQL.
 Los datos en /data/temperaturas_limpias.csv deben estar preprocesados desde la API de AEMET.
 Los notebooks en /notebooks son solo para referencia y no deben ejecutarse como parte de la aplicación.
-
