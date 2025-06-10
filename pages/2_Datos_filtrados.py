@@ -7,6 +7,13 @@ from src.coroplet import dibujar_coropletico, dibujar_coropletico_plotly
 from src import conectar
 from src.personalizacion import load_css
 
+st.set_page_config(
+    page_title="Proyecto Grupo D",
+    page_icon="🌡️",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+    )
+
 def main():
     conexion = conectar.conexion()
     load_css('src/estilos.css')
