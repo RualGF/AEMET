@@ -30,3 +30,4 @@ notebooks/*.ipynb
 
 # Carpeta innecesaria
 data/historico/
+src/__pycache__/
