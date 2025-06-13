@@ -52,7 +52,7 @@ def ejecutar_consulta_a_dataframe(consulta_recibida: str = "", params: dict = {}
                         consulta = consulta + f" AND (d.fecha = '{params[p]}')"
                     elif p == "fecha_inicio":
                         consulta = consulta + f" AND (d.fecha BETWEEN '{params['fecha_inicio']}' AND '{params['fecha_fin']}')"
-            consulta = consulta + " GROUP BY codigo_prov ORDER BY codigo_prov;"
+            consulta = consulta + " GROUP BY d.codigo_prov, p.nombre ORDER BY d.codigo_prov;"
             df_resultado = ejecutar_consulta_a_dataframe(consulta)
             return df_resultado
     except Exception as e:

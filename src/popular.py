@@ -1,11 +1,15 @@
 import pandas as pd
-
-import conectar
+import sys
+from sqlalchemy import create_engine
+import pandas as pd
+import streamlit as st # Assuming you use st.secrets here
+import conectar # Assuming your connection function is in conectar.py
 
 df = pd.read_csv(r".\data\temperaturas_limpias.csv")
 
 provincias = pd.read_sql_table("provincias", con=conectar.conexion())
 
+print(provincias)
 valores_insertar = pd.merge(
     df,
     provincias["codigo_prov"],  # <--- Seleccionar solo las columnas necesarias de 'provincias'
@@ -35,6 +39,7 @@ orden_columnas = [
 
 valores_insertar = valores_insertar[orden_columnas]
 
+print(valores_insertar.head())
 try:
     print(
         f"Iniciando inserción de {len(valores_insertar)} filas usando valores_insertar.to_sql()..."
@@ -50,8 +55,8 @@ try:
         con=conectar.conexion(),
         if_exists="append",
         index=False,
-        method="multi",  # Muy importante para el rendimiento con MySQL
-        chunksize=10000,  # Inserta en lotes de 10000 filas, ajusta según necesidad
+        #method="multi",  # Muy importante para el rendimiento con MySQL
+        chunksize=1000,  # Inserta en lotes de 10000 filas, ajusta según necesidad
     )
     print(
         f"¡{len(valores_insertar)} filas insertadas correctamente usando valores_insertar.to_sql()!"

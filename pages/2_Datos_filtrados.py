@@ -36,14 +36,15 @@ def main():
     #    st.write_stream(fecha)
     
     with col2:    
-        opcion_comunidad = st.selectbox(
-            "Elige la comunidad: ",
-            df_comunidades["nombre"],
-            index=None,
-            placeholder="Elige una comunidad",
-            #format_func=lambda x: "Selecciona una comunidad..." if x == "" else x
-            )
-
+        # opcion_comunidad = st.selectbox(
+        #     "Elige la comunidad: ",
+        #     df_comunidades["nombre"],
+        #     index=None,
+        #     placeholder="Elige una comunidad",
+        #     disabled=False
+        #     #format_func=lambda x: "Selecciona una comunidad..." if x == "" else x
+        #     )
+        opcion_comunidad = None
     with col3:
         if opcion_comunidad:
             comunidad_elegida = df_comunidades[df_comunidades["nombre"] == opcion_comunidad]
