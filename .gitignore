@@ -1,36 +1,33 @@
-# Entorno virtual
+# Entorno virtual y vars de entorno
 .venv/
 .entorno/
-
-# Archivos de secretos de Streamlit
-.streamlit/secrets.toml
-
-
-# Archivos temporales
-.ipynb_checkpoints/
-
-# Python cache
-src/__pycache__/
-src/*.pyc
-
-# Archivos ocultos del sistema en MacOS
-.DS_Store
-
-# Claves o configuración sensible
 .env
 *.env
 
-# Ignorar todos los CSV excepto estos dos
+# MacOS y temporales de editor
+.DS_Store
+.ipynb_checkpoints/
+
+# Caché de Python
+__pycache__/
+*.pyc
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Datos: ignoro todos los CSV salvo estos dos
 data/*.csv
 !data/estaciones_filtradas.csv
 !data/temperaturas_historicas_ampliadas.csv
-data/spain-provinces.geojson
 
-# Ignorar notebooks excepto el bueno
+# Notebooks: ignoro todo salvo los que explícitamente quiero versionar
 notebooks/*.ipynb
 !notebooks/Extracción y limpieza.ipynb
 !notebooks/Extraccion punto 1.ipynb
+!notebooks/01_Extracción_10_Años.ipynb
+!notebooks/02_Extracción_Diaria.ipynb
+!notebooks/03_DeepLearning_Global.ipynb
+!notebooks/04_DeepLearning_Clusters.ipynb
 
-
-# Carpeta innecesaria
+# Otros directorios sobrantes
 data/historico/
