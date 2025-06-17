@@ -571,7 +571,7 @@
       "properties": {
         "cod_ccaa": "07",
         "noml_ccaa": "COMUNIDAD DE CASTILLA Y LEON",
-        "name": "Castilla-Leon",
+        "name": "Castilla-León",
         "cartodb_id": 7,
         "created_at": "2014-09-30T00:00:00Z",
         "updated_at": "2014-12-25T02:07:41Z"
@@ -5621,7 +5621,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "09",
+        "cod_ccaa": "08",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE CATALUÑA",
         "name": "Cataluña",
         "cartodb_id": 8,
@@ -5665,7 +5665,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "18",
+        "cod_ccaa": "09",
         "noml_ccaa": "CIUDAD DE CEUTA",
         "name": "Ceuta",
         "cartodb_id": 9,
@@ -6678,7 +6678,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "14",
+        "cod_ccaa": "15",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE LA REGION DE MURCI",
         "name": "Murcia",
         "cartodb_id": 15,
@@ -6818,7 +6818,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "17",
+        "cod_ccaa": "12",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE LA RIOJA",
         "name": "La Rioja",
         "cartodb_id": 12,
@@ -10808,9 +10808,9 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "04",
+        "cod_ccaa": "03",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE LAS ILLES BALEARS",
-        "name": "Baleares",
+        "name": "Illes Balears",
         "cartodb_id": 3,
         "created_at": "2014-09-30T00:00:00Z",
         "updated_at": "2014-12-25T02:07:41Z"
@@ -17892,7 +17892,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "05",
+        "cod_ccaa": "04",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE CANARIAS",
         "name": "Canarias",
         "cartodb_id": 4,
@@ -18735,7 +18735,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "06",
+        "cod_ccaa": "05",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE CANTABRIA",
         "name": "Cantabria",
         "cartodb_id": 5,
@@ -20041,7 +20041,7 @@
       "properties": {
         "cod_ccaa": "01",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE ANDALUCIA",
-        "name": "Andalucia",
+        "name": "Andalucía",
         "cartodb_id": 1,
         "created_at": "2014-09-30T00:00:00Z",
         "updated_at": "2014-12-25T02:07:41Z"
@@ -26423,9 +26423,9 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "03",
+        "cod_ccaa": "18",
         "noml_ccaa": "COMUNIDAD AUTONOMA DEL PRINCIPADO DE AST",
-        "name": "Asturias",
+        "name": "Principado de Asturias",
         "cartodb_id": 18,
         "created_at": "2014-09-30T00:00:00Z",
         "updated_at": "2014-12-25T02:07:41Z"
@@ -27128,9 +27128,9 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "10",
+        "cod_ccaa": "19",
         "noml_ccaa": "COMUNIDAD VALENCIANA",
-        "name": "Valencia",
+        "name": "Comunitat Valenciana",
         "cartodb_id": 19,
         "created_at": "2014-09-30T00:00:00Z",
         "updated_at": "2014-12-25T02:07:41Z"
@@ -27153,7 +27153,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "19",
+        "cod_ccaa": "14",
         "noml_ccaa": "CIUDAD DE MELILLA",
         "name": "Melilla",
         "cartodb_id": 14,
@@ -27338,7 +27338,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "15",
+        "cod_ccaa": "16",
         "noml_ccaa": "COMUNIDAD FORAL DE NAVARRA",
         "name": "Navarra",
         "cartodb_id": 16,
@@ -43289,7 +43289,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "12",
+        "cod_ccaa": "11",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE GALICIA",
         "name": "Galicia",
         "cartodb_id": 11,
@@ -43599,7 +43599,7 @@
       "properties": {
         "cod_ccaa": "02",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE ARAGON",
-        "name": "Aragon",
+        "name": "Aragón",
         "cartodb_id": 2,
         "created_at": "2014-09-30T00:00:00Z",
         "updated_at": "2014-12-25T02:07:41Z"
@@ -44007,7 +44007,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "11",
+        "cod_ccaa": "10",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE EXTREMADURA",
         "name": "Extremadura",
         "cartodb_id": 10,
@@ -44426,7 +44426,7 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "08",
+        "cod_ccaa": "06",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE CASTILLA-LA MANCHA",
         "name": "Castilla-La Mancha",
         "cartodb_id": 6,
@@ -44919,9 +44919,9 @@
         ]
       },
       "properties": {
-        "cod_ccaa": "16",
+        "cod_ccaa": "17",
         "noml_ccaa": "COMUNIDAD AUTONOMA DEL PAIS VASCO O DE E",
-        "name": "Pais Vasco",
+        "name": "País Vasco",
         "cartodb_id": 17,
         "created_at": "2014-09-30T00:00:00Z",
         "updated_at": "2014-12-25T02:07:41Z"
