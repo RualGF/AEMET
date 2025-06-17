@@ -1,7 +1,7 @@
 import streamlit as st
 
+#from snowflake.snowpark.session import Session
 from sqlalchemy import create_engine
-
 
 def conexion():
     """Retorna una nueva conexión desde el motor."""
@@ -11,11 +11,24 @@ def conexion():
     servidor = st.secrets["database"]["host"]
     puerto = st.secrets["database"]["port"]
 
-    #Conexión para Mysql local
+    # Conexión para Mysql local
     motor = create_engine(f"mysql+pymysql://{usuario}:{pw}@{servidor}:{puerto}/{bd}")
-    #Conexión para supabase
-    #motor = create_engine(f"postgresql+psycopg2://{usuario}:{pw}@{servidor}:{puerto}/{bd}?sslmode=require")
+    # Conexión para supabase
+    # motor = create_engine(f"postgresql+psycopg2://{usuario}:{pw}@{servidor}:{puerto}/{bd}?sslmode=require")
     
+    #Conexión para snowflake
+    # motor = Session.builder.configs(
+    #     {
+    #         "account": st.secrets["snowflake"]["account"],
+    #         "user": st.secrets["snowflake"]["user"],
+    #         "password": st.secrets["snowflake"]["password"],
+    #         "role": "ACCOUNTADMIN",
+    #         "warehouse": "COMPUTE_WH",
+    #         "database": st.secrets["snowflake"]["database"],
+    #         "schema": "public",
+    #     }
+    # ).create()
+
     # Abrir una conexión
     conectar = motor.connect()
     
