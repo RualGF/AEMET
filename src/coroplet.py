@@ -1,237 +1,199 @@
-import geopandas as gpd
-import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
+import json
+import streamlit as st
 
 
-# GeoJSON
-gdf = gpd.read_file('data/spain-provinces.geojson')
-gdf['codigo_prov'] = gdf['cod_prov'].astype(int)
+@st.cache_data
+def cargar_geojson_con_canarias_reubicadas(ruta_geojson):
+    with open(ruta_geojson, 'r', encoding='utf-8') as f:
+        geojson = json.load(f)
 
-def dibujar_coropletico(datos, nombre_columna, texto_titulo, etiqueta_leyenda):
+    codigos_provincias_canarias = {"35", "38"}  # Las dos provincias insulares
+    codigos_ccaa_canarias = {"04"}  # Código de la CCAA Canarias en el GeoJSON de CCAA
+
+
+    def desplazar_coords(coords):
+        return [
+            [[x + 5, y + 7] for x, y in ring if isinstance(ring, list)]
+            for ring in coords if isinstance(ring, list)
+        ]
+
+    for feature in geojson["features"]:
+        props = feature["properties"]
+        geom = feature["geometry"]
+
+        cod_prov = props.get("cod_prov")
+        cod_ccaa = props.get("cod_ccaa")
+
+        if cod_prov:  # GeoJSON de provincias
+            cod = str(cod_prov).zfill(2)
+            if cod in codigos_provincias_canarias:
+                if geom["type"] == "Polygon":
+                    geom["coordinates"] = desplazar_coords(geom["coordinates"])
+                elif geom["type"] == "MultiPolygon":
+                    geom["coordinates"] = [
+                        [
+                            [[x + 5, y + 7] for x, y in ring if isinstance(ring, list)]
+                            for ring in polygon if isinstance(ring, list)
+                        ]
+                        for polygon in geom["coordinates"] if isinstance(polygon, list)
+                    ]
+        elif cod_ccaa:  # GeoJSON de CCAA
+            cod = str(cod_ccaa).zfill(2)
+            if cod in codigos_ccaa_canarias:
+                if geom["type"] == "Polygon":
+                    geom["coordinates"] = desplazar_coords(geom["coordinates"])
+                elif geom["type"] == "MultiPolygon":
+                    geom["coordinates"] = [
+                        [
+                            [[x + 5, y + 7] for x, y in ring if isinstance(ring, list)]
+                            for ring in polygon if isinstance(ring, list)
+                        ]
+                        for polygon in geom["coordinates"] if isinstance(polygon, list)
+                    ]
+
+        # Asignar ID en todos los casos
+        feature["id"] = str(cod_prov or cod_ccaa).zfill(2)
+
+    return geojson
+ 
+def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provincias'):
     """
-    - datos: DataFrame con ['provincia', nombre_columna].
-    - nombre_columna: columna a mapear (p.ej. 'tmed_promedio').
-    - texto_titulo: título del gráfico.
-    - etiqueta_leyenda: texto para la escala de colores.
+    Visualización coroplética interactiva con Plotly.
 
-    Provincias sin datos (NaN) se pintan en gris y la flecha 'Sin datos' apunta a Castellón,
-    siempre que Castellón esté en el GeoDataFrame y falte en los datos.
+    datos: DataFrame con columnas ['codigo_prov', 'nombre', nombre_columna].
+    nombre_columna: columna de valores numéricos a mapear.
+    texto_titulo: título del gráfico.
+    etiqueta_leyenda: texto para la barra de color.
     """
-    vmin = datos[nombre_columna].min()
-    vmax = datos[nombre_columna].max()
-    print(f"Rango de colores fijo: vmin = {vmin:.1f}, vmax = {vmax:.1f}")
-    # Unión geográfica
     
-    gdf_unido = gdf.merge(datos, on='codigo_prov', how='left')
+    variables_config = {
+        'tmed':    {'color': 'RdBu_r', 'label': 'Temp. media',     'unidad': '°C'},
+        'tmin':    {'color': 'RdBu_r', 'label': 'Temp. mínima',    'unidad': '°C'},
+        'tmax':    {'color': 'RdBu_r', 'label': 'Temp. máxima',    'unidad': '°C'},
+        'prec':    {'color': 'Blues',  'label': 'Precipitación',   'unidad': 'mm'},
+        'hrMedia': {'color': 'Purples','label': 'Humedad relativa','unidad': '%'},
+        'racha':   {'color': 'Oranges','label': 'Racha viento',    'unidad': 'km/h'},
+        'altitud': {'color': 'Greens', 'label': 'Altitud',         'unidad': 'm'}
+    }
+
+    geojson_provincias = cargar_geojson_con_canarias_reubicadas('data/spain-provinces.geojson')
+    geojson_ccaa = cargar_geojson_con_canarias_reubicadas('data/spain-comunidad-autonoma.geojson')
+    #geojson_ccaa = pd.read_json('data/spain-comunidad-autonoma.geojson')
+
+
+    # Asegurarse de que los códigos sean string con ceros a la izquierda
+    if nivel == 'ccaa':
+        geojson_data = geojson_ccaa
+        geojson_key = 'properties.cod_ccaa'
+        location_col = 'cod_ccaa'
+        base = pd.DataFrame([
+            {'cod_ccaa': feature['properties']['cod_ccaa']}
+            for feature in geojson_data['features']
+        ])
+        base['cod_ccaa'] = base['cod_ccaa'].astype(str).str.zfill(2)
+        
+        
+        datos['cod_ccaa'] = datos['cod_ccaa'].astype(str).str.zfill(2)
+        
+        datos = datos.merge(base, on='cod_ccaa', how='left')
+        
+    else:
+        geojson_data = geojson_provincias
+        geojson_key = 'properties.cod_prov'
+        location_col = 'codigo_prov'
+        base = pd.DataFrame([
+            {'codigo_prov': feature['properties']['cod_prov'], 'nombre': feature['properties']['name']}
+            for feature in geojson_data['features']
+        ])
+        base['codigo_prov'] = base['codigo_prov'].astype(str).str.zfill(2)
+        
+        
+        datos['codigo_prov'] = datos['codigo_prov'].astype(str).str.zfill(2)
+        
+        datos = base.merge(datos, on=['codigo_prov', 'nombre'], how='left')
     
-    # Manejo si vmin y vmax son iguales (ej. todos los valores son iguales o solo hay un valor)
+    # Añadir columna auxiliar para gestionar NaN con color gris
+    datos['_valor_plot'] = datos[nombre_columna].copy().fillna(-9999)
+    unidad = variables_config.get(nombre_columna, {}).get('unidad', '')
+    datos['_hover_valor'] = datos[nombre_columna].apply(
+        lambda x: f"{x:.1f} {unidad}" if pd.notna(x) else "Sin datos")
+
+    # Rango de color excluyendo el valor -9999
+    vmin = datos.loc[datos['_valor_plot'] != -9999, '_valor_plot'].min()
+    vmax = datos.loc[datos['_valor_plot'] != -9999, '_valor_plot'].max()
+ 
     if vmin == vmax:
         vmin = vmin * 0.9 if vmin != 0 else -1
         vmax = vmax * 1.1 if vmax != 0 else 1
-    
-    # figura y eje
-    fig, ax = plt.subplots(figsize=(10, 10))
-    
-    # Dibujamos el coroplético
-    gdf_unido.plot(
-        column=nombre_columna,
-        cmap='coolwarm',
-        vmin=vmin,
-        vmax=vmax,
-        legend=True,
-        edgecolor='black',
-        linewidth=0.4,
-        ax=ax,
-        legend_kwds={
-            'label': etiqueta_leyenda,
-            'shrink': 0.6,
-            'ticks': np.linspace(vmin, vmax, 7).round(1) # Asegura que los ticks se ajustan y son legibles
-        },
-        missing_kwds={
-            'color': 'lightgrey',
-            'label': 'Sin datos'
-        }
-    )
-    
-    # Título y quitamos ejes
-    ax.set_title(texto_titulo, fontsize=16, pad=30)
-    ax.axis('off')
-    
-    # Anotamos provincia máxima 
-    if datos[nombre_columna].notna().any():
-        provincia_max = datos.loc[datos[nombre_columna].idxmax(), 'nombre']
-        valor_max = datos[nombre_columna].max()
-         # Asegúrate de que la provincia_max existe en gdf_unido
-        if provincia_max in gdf_unido['nombre'].values:
-            punto_max = gdf_unido[gdf_unido['nombre'] == provincia_max].geometry.centroid.iloc[0]
-            ax.annotate(
-                f"Máx: {provincia_max}\n{valor_max:.1f}", # Quitamos °C, se espera en la leyenda
-                xy=(punto_max.x, punto_max.y),
-                xytext=(punto_max.x + 1.0, punto_max.y - 1.0), # Ajusta estos valores para tu mapa
-                arrowprops=dict(arrowstyle="->", color='black'),
-                fontsize=10,
-                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="black", alpha=0.7)
-            )
-    
-    # Anotamos provincia mínima
-    if datos[nombre_columna].notna().any():
-        idx_min = datos[nombre_columna].idxmin()
-        provincia_min = datos.loc[idx_min, 'nombre']
-        valor_min = datos[nombre_columna].min()
 
-        if provincia_min in gdf_unido['nombre'].values:
-            punto_min = gdf_unido[gdf_unido['nombre'] == provincia_min].geometry.centroid.iloc[0]
-            ax.annotate(
-                f"Mín: {provincia_min}\n{valor_min:.1f}", # Quitamos °C
-                xy=(punto_min.x, punto_min.y),
-                xytext=(punto_min.x - 2.0, punto_min.y + 1.0), # Ajusta estos valores
-                arrowprops=dict(arrowstyle="->", color='black'),
-                fontsize=10,
-                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="black", alpha=0.7)
-            )
-    
-    # Buscamos el subconjunto de provincias con NaN en nombre_columna
-    sin_datos = gdf_unido[gdf_unido[nombre_columna].isna()]
-    
-    # Verificamos primero si 'Castellón' está en esa lista
-    if not sin_datos.empty and 'Castellón' in list(sin_datos['nombre']):
-        # Seleccionamos la fila de Castellón
-        fila_castellon = sin_datos[sin_datos['nombre'] == 'Castellón'].iloc[0]
-        centroide_c = fila_castellon.geometry.centroid
-        ax.annotate(
-            "Sin datos",
-            xy=(centroide_c.x, centroide_c.y),
-            xytext=(centroide_c.x + 1.0, centroide_c.y - 1.0),
-            arrowprops=dict(arrowstyle="->", color='black'),
-            fontsize=10,
-            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="black", alpha=0.7)
-        )
-    # Si Castellón no existe (u otra provincia que falte), no se anota nada.
-    
-    plt.tight_layout()
+    if "nombre" not in datos.columns:
+        print("Columnas disponibles:", datos.columns)
+        raise ValueError("El DataFrame debe tener una columna 'nombre' para el hover.")
+    custom_cols = ['_hover_valor']
+    if 'nombre' in datos.columns:
+        custom_cols.insert(0, 'nombre')
+     # Crear el mapa coroplético con hover customizado
+    fig = px.choropleth(
+        datos,
+        geojson=geojson_data,
+        locations=location_col,
+        featureidkey=geojson_key,
+        color='_valor_plot',
+        color_continuous_scale=variables_config.get(nombre_columna, {}).get('color', 'RdBu_r'),
+        range_color=(vmin, vmax),
+        custom_data=custom_cols,
+        title=texto_titulo
+    )
+
+    cfg = variables_config.get(nombre_columna, {})
+    nombre_amigable = cfg.get('label', nombre_columna)
+    string_para_hover_template = f"<b>%{{customdata[0]}}</b><br>{nombre_amigable}: %{{customdata[1]}}<extra></extra>"
+    fig.update_traces(hovertemplate=string_para_hover_template)
+
+    # Añadir capa para provincias sin datos (gris)
+    for i, row in datos.iterrows():
+        if row['_valor_plot'] == -9999:
+            fig.add_trace(go.Choropleth(
+                geojson=geojson_data,
+                locations=[row[location_col]],
+                z=[0],
+                colorscale=[[0, 'lightgrey'], [1, 'lightgrey']],
+                showscale=False,
+                featureidkey=geojson_key,
+                hoverinfo='skip'
+            ))
+
+    # Ajustes del mapa para asegurar buen tamaño
+    fig.update_geos(fitbounds="geojson", visible=False)
+
+    # Anotaciones para máximos y mínimos (si hay datos)
+    if datos[nombre_columna].notna().any():
+       
+        idx_max = datos[nombre_columna].idxmax()
+        entidad_max = datos.loc[idx_max, 'nombre']
+        valor_max = datos.loc[idx_max, nombre_columna]
+
+        idx_min = datos[nombre_columna].idxmin()
+        entidad_min = datos.loc[idx_min, 'nombre']
+        valor_min = datos.loc[idx_min, nombre_columna]
+
+        resumen_extremos = f"📈 Máx: {entidad_max} ({valor_max:.1f} {unidad})    📉 Mín: {entidad_min} ({valor_min:.1f} {unidad})"
+        
+        fig.update_layout(
+            title=dict(
+                text=f"{texto_titulo}<br><sub>{resumen_extremos}</sub>",
+                x=0.5, xanchor='center'
+            ),
+        coloraxis_colorbar=dict(
+            title=f"{cfg.get('label', nombre_columna)} ({cfg.get('unidad', '')})",
+            tickvals=np.linspace(vmin, vmax, 7).round(1)
+        ),
+        margin={"r":0,"t":80,"l":0,"b":0},
+        height=700
+    )
 
     return fig
-
-def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, etiqueta_leyenda):
-
-    # gdf_for_centroids = gdf.to_crs(epsg=25830)
-    gdf_unido = gdf.merge(datos, on='codigo_prov', how='left')
-
-    # Rango de color
-    vmin = datos[nombre_columna].min()
-    vmax = datos[nombre_columna].max()
-    if vmin == vmax:
-        vmin = vmin * 0.9 if vmin != 0 else -1
-        vmax = vmax * 1.1 if vmax != 0 else 1
-
-    # Simula provincias sin datos como -999
-    datos_plot = datos.copy()
-    datos_plot[nombre_columna] = datos_plot[nombre_columna].fillna(-999)
-
-    # Color scale con gris para -999 y luego escala Viridis
-    color_scale = [
-        [0.0, "lightgrey"],  # Para -999
-        [0.00001, px.colors.sequential.Viridis[0]],  # Mismo inicio que la escala real
-        [1.0, px.colors.sequential.Viridis[-1]]
-    ]
-
-    # Crear mapa
-    fig_px = px.choropleth(
-        data_frame=datos_plot,
-        geojson=gdf_unido,
-        locations="codigo_prov",
-        featureidkey="properties.cod_prov",
-        color=nombre_columna,
-        color_continuous_scale=color_scale,
-        range_color=(vmin, vmax),
-        hover_name="nombre",
-        hover_data={nombre_columna: ":.2f"}, # Formato y ocultar 'nombre' duplicado
-        labels={nombre_columna: etiqueta_leyenda},
-        title=texto_titulo
-        #na_color="lightgrey"
-    )
-    
-    # Centrado y zoom ajustado para España
-    fig_px.update_geos(
-        fitbounds="locations",
-        visible=False,
-        # center={"lat": 40.4, "lon": -3.7},
-        # projection_scale=5,
-        # lataxis_range=[34, 44],
-        # lonaxis_range=[-10, 5],
-        #showland=False,
-        #showcountries=True,
-        #countrycolor="black",
-        #landcolor="lightgray",
-        showsubunits=True,
-        subunitcolor="darkgray"
-    )
-    #fig_px.update_traces(marker_line_width=0.5, marker_line_color="black")
-
-    # Layout
-    fig_px.update_layout(
-        # title=dict(
-        #     text=texto_titulo,
-        #     font=dict(size=20),
-        #     x=0.5,
-        #     xanchor='center',
-        #     y=0.96,
-        #     yanchor='top'
-        # ),
-        margin=dict(l=0, r=0, t=80, b=0),
-        height=900,
-        width=900,
-        coloraxis_colorbar=dict(
-            title=etiqueta_leyenda,
-            lenmode='pixels',
-            len=200,
-            x=1.02,
-            y=0.5,
-            xanchor='left', # Ancla la barra a la izquierda de la posición X
-            yanchor='middle'
-        ),
-    )
-
-    # Anotaciones: máx y mín
-    anotaciones = []
-    def añadir_anotacion(texto, punto, dx=1.0, dy=1.0, color="black"):
-        anotaciones.append(dict(
-            x=punto.x + dx,
-            y=punto.y + dy,
-            xref="x", yref="y",
-            text=texto,
-            showarrow=True,
-            arrowhead=2,
-            ax=-dx * 50, ay=-dy * 50,
-            font=dict(size=12, color="black"),
-            bgcolor="white",
-            bordercolor=color,
-            borderwidth=1
-        ))
-    #datos_validos = datos.dropna(subset=[nombre_columna])
-    # Mínimo
-    if datos[nombre_columna].notna().any():
-        idx_min = datos[nombre_columna].idxmin()
-        prov_min = datos.loc[idx_min, 'nombre']
-        valor_min = datos.loc[idx_min, nombre_columna]
-        p_min = gdf_unido[gdf_unido['nombre'] == prov_min].geometry.centroid.iloc[0]
-        añadir_anotacion(f"Mín: {prov_min}<br>{valor_min:.1f}", p_min, dx=-1.0, dy=-1.0)
-        
-    # Máximo
-        idx_max = datos[nombre_columna].idxmax()
-        prov_max = datos.loc[idx_max, 'nombre']
-        valor_max = datos.loc[idx_max, nombre_columna]
-        p_max = gdf_unido[gdf_unido['nombre'] == prov_max].geometry.centroid.iloc[0]
-        añadir_anotacion(f"Máx: {prov_max}<br>{valor_max:.1f}", p_max, dx=0.5, dy=0.5)
-
-     # "Sin datos" en Castellón si corresponde
-    sin_datos = gdf_unido[gdf_unido[nombre_columna].isna()]
-    if not sin_datos.empty and 'Castellón' in sin_datos['nombre'].values:
-        p_cas = sin_datos[sin_datos['nombre'] == 'Castellón'].geometry.centroid.iloc[0]
-        añadir_anotacion("Sin datos", p_cas, dx=0.7, dy=-0.3, color="gray")
-
-    fig_px.update_layout(annotations=anotaciones)
-
-    return fig_px
-
