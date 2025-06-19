@@ -3,7 +3,8 @@ import streamlit as st
 #from snowflake.snowpark.session import Session
 from sqlalchemy import create_engine
 
-def conexion():
+#@st.cache_resource(show_spinner="Conectando a la base de datos...")
+def conexion_a_bd():
     """Retorna una nueva conexión desde el motor."""
     usuario = st.secrets["database"]["user"]
     pw = st.secrets["database"]["password"]
@@ -30,6 +31,6 @@ def conexion():
     # ).create()
 
     # Abrir una conexión
-    conectar = motor.connect()
+    #conn = motor.connect()
     
-    return conectar
+    return motor
