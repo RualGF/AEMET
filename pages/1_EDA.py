@@ -1,232 +1,189 @@
+from datetime import date
 import pandas as pd
 import streamlit as st
-from datetime import date
+from sqlalchemy import func, bindparam, Float
 
-from src.extraer_datos import ejecutar_consulta_a_dataframe
+
+from src.extraer_datos import (
+    construir_consulta_general, ejecutar_consulta_a_dataframe,
+    df_provincias, df_comunidades, tabla_dm
+)
 from src.coroplet import dibujar_coropletico_plotly
-from src import conectar
 from src.personalizacion import load_css
 
 st.set_page_config(
-    page_title="Proyecto Grupo D",
-    page_icon="🌡️",
+    page_title="EDA",
+    page_icon="🧹",
     layout="wide",
     initial_sidebar_state="collapsed"
-)
+    )
+load_css('src/estilos.css')
+
+with st.sidebar:
+    if st.button("🧹 Limpiar caché y reiniciar"):
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        st.session_state.clear()
+        st.rerun()
+
+st.title("Datos meteorológicos filtrados")
+st.divider()
+
+velocidad = func.round(func.avg(tabla_dm.c.racha).cast(Float) * 3.6, 2)
+metricas_disponibles = {
+    "Altitud media (m)": {"col": "altitud", "expr": func.avg(tabla_dm.c.altitud), "unidad": "m"},
+    "Temp. media (ºC)": {"col": "tmed", "expr": func.avg(tabla_dm.c.tmed), "unidad": "ºC"},
+    "Temp. mínima (ºC)": {"col": "tmin", "expr": func.avg(tabla_dm.c.tmin), "unidad": "ºC"},
+    "Temp. máxima (ºC)": {"col": "tmax", "expr": func.avg(tabla_dm.c.tmax), "unidad": "ºC"},
+    "Precip. media (mm)": {"col": "prec", "expr": func.avg(tabla_dm.c.prec), "unidad": "mm"},
+    "Racha media (km/h)": {"col": "racha", "expr": velocidad, "unidad": "km/h"},
+    "Humedad media (%)": {"col": "hrMedia", "expr": func.avg(tabla_dm.c.hrMedia), "unidad": "%"},
+}
+columnas_agregadas = [
+                v["expr"].label(v["col"]) for v in metricas_disponibles.values()
+                ]
+
+columnas_st = {
+    v["col"]: st.column_config.NumberColumn(label=k, format="%.2f", help=v["unidad"])
+    for k, v in metricas_disponibles.items()
+}
+
+metricas_orden = [v["col"] for v in metricas_disponibles.values()]
+
+def generar_df_cache(clave_df, clave_params, stmt_conf, **params):
+    """
+    Devuelve un DataFrame ejecutando una consulta si no hay cache o cambian los parámetros.
+
+    - clave_df: nombre para guardar el DataFrame en session_state
+    - clave_params: nombre para guardar los parámetros previos
+    - stmt_conf: configuración de la consulta SQL
+    - params: parámetros como fecha_inicio, fecha_fin, etc.
+    """
+    if clave_df not in st.session_state or st.session_state.get(clave_params) != params:
+        consulta = construir_consulta_general(stmt_conf)
+        st.write(f"Ejecutando consulta SQL para '{clave_df}' con parámetros:", params)
+        df = ejecutar_consulta_a_dataframe(consulta, **params)
+        st.session_state[clave_df] = df
+        st.session_state[clave_params] = params
+    else:
+        st.write(f"Usando cache para '{clave_df}'")
+
+    return st.session_state[clave_df]
+
+def mostrar_tab_territorial(nivel: str):
+    """
+    nivel: 'provincia' o 'ccaa'
+    """
+    assert nivel in ("provincia", "ccaa"), "Nivel territorial inválido"
+
+    # Widgets comunes
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        fechas = st.date_input(
+            "Selecciona un rango de fechas:",
+            value=(date(2023, 5, 29), date(2025, 5, 28)),
+            min_value=date(2023, 5, 29),
+            max_value=date(2025, 5, 28),
+            format="DD/MM/YYYY",
+            key=f"fecha_{nivel}"
+        )
+
+    with col3:
+        metrica = st.selectbox("Métrica a visualizar:", list(metricas_disponibles.keys()), key=f"metrica_{nivel}")
+        metrica_conf = metricas_disponibles[metrica]
+        columna = metrica_conf["col"]
+
+    if nivel == "provincia":
+        with col2:
+            filtro = st.multiselect("Elige la provincia:", df_provincias["nombre_prov"], placeholder="Opcional")
+    else:
+        with col2:
+            filtro = st.multiselect("Elige la comunidad:", df_comunidades["nombre_ccaa"], placeholder="Opcional")
+
+    if fechas and len(fechas) == 2:
+        params = {"fecha_inicio": fechas[0], "fecha_fin": fechas[1]}
+        stmt = {
+            "select": [tabla_dm.c.codigo_prov, *columnas_agregadas],
+            "join": ["provincia"],
+            "filters": [tabla_dm.c.fecha.between(bindparam("fecha_inicio"), bindparam("fecha_fin"))],
+            "group_by": [tabla_dm.c.codigo_prov]
+        }
+
+        # Cache independiente por nivel
+        cache_df_key = f"df_{nivel}"
+        cache_params_key = f"{nivel}_params"
+        df = generar_df_cache(cache_df_key, cache_params_key, stmt, **params)
+
+        if not df.empty:
+            df = df.merge(df_provincias[["codigo_prov", "nombre_prov", "codigo_ca"]], on="codigo_prov")
+
+            if nivel == "ccaa":
+                df = df.merge(df_comunidades[["codigo_ca", "nombre_ccaa"]], on="codigo_ca")
+
+            # Asegurar racha como numérico
+            if "racha" in df.columns:
+                df["racha"] = pd.to_numeric(df["racha"], errors="coerce")
+
+            # Aplicar filtros
+            if nivel == "provincia" and filtro:
+                df = df[df["nombre_prov"].isin(filtro)]
+            elif nivel == "ccaa" and filtro:
+                df = df[df["nombre_ccaa"].isin(filtro)]
+
+            # Agregación para comunidades
+            if nivel == "ccaa":
+                columnas = [col for col in metricas_orden if col in df.columns]
+                df = df.groupby(["codigo_ca", "nombre_ccaa"], as_index=False)[columnas].mean()
+                df = df.rename(columns={"codigo_ca": "cod_ccaa"})
+                nombre_col = "nombre_ccaa"
+                cod_col = "cod_ccaa"
+            else:
+                nombre_col = "nombre_prov"
+                cod_col = "codigo_prov"
+                columnas = [col for col in metricas_orden if col in df.columns]
+
+            # Ordenar
+            df = df.sort_values(by=columna, ascending=False)
+            df = df[[nombre_col, cod_col] + columnas]
+            st.write(df_comunidades["nombre_ccaa"])
+
+            st.dataframe(df, use_container_width=True, hide_index=True, column_config={
+                nombre_col: st.column_config.TextColumn("Nombre de la comunidad"),
+                cod_col: None,
+                **columnas_st
+            })
+
+            # Mapa
+            titulo = f"{metrica} por {nivel} del {fechas[0].strftime('%d/%m/%Y')} al {fechas[1].strftime('%d/%m/%Y')}"
+            cache_fig_key = f"fig_{nivel}"
+            cache_fig_params_key = f"{nivel}_fig_params"
+
+            filtro_id = tuple(sorted(filtro)) if isinstance(filtro, list) else filtro or ""
+            params_fig = (columna, titulo, filtro_id)
+
+            if cache_fig_key not in st.session_state or st.session_state.get(cache_fig_params_key) != params_fig:
+                
+
+                fig = dibujar_coropletico_plotly(df, columna, titulo, nivel=nivel)
+                st.session_state[cache_fig_key] = fig
+                st.session_state[cache_fig_params_key] = params_fig
+            
+            st.spinner("Cargando mapa...")
+            st.write(f"Mostrando {len(df)} registros tras filtros.")
+            st.plotly_chart(st.session_state[cache_fig_key], use_container_width=True)
+
 
 def main():
-    conexion = conectar.conexion()
-    load_css('src/estilos.css')
-
-    st.title("Datos meteorológicos filtrados")
-    st.divider()
-
-    df_provincias = pd.read_sql_table("provincias", conexion)
-    df_comunidades = pd.read_sql_table("comunidades", conexion)
-
-    tab_provincias, tab_ccaa = st.tabs(["Por provincias", "Por comunidades autónomas"])
-
-    metricas_disponibles = {
-        "Altitud media (m)": {"original_col": "AVG(d.altitud)", "new_col": "altitud", "unidad": "m"},
-        "Temp. media (ºC)": {"original_col": "AVG(d.tmed)", "new_col": "tmed", "unidad": "ºC"},
-        "Temp. mínima (ºC)": {"original_col": "AVG(d.tmin)", "new_col": "tmin", "unidad": "ºC"},
-        "Temp. máxima (ºC)": {"original_col": "AVG(d.tmax)", "new_col": "tmax", "unidad": "ºC"},
-        "Precip. media (mm)": {"original_col": "AVG(d.prec)", "new_col": "prec", "unidad": "mm"},
-        "Racha media (km/h)": {"original_col": "AVG(d.racha) * 3.6", "new_col": "racha", "unidad": "km/h"},
-        "Humedad media (%)": {"original_col": "AVG(d.hrMedia)", "new_col": "hrMedia", "unidad": "%"},
-    }
-    
-    columnas_st={
-        "altitud": st.column_config.NumberColumn(label="Altitud media (m)", format="%.2f",),
-        "tmed": st.column_config.NumberColumn(label="Temp. media (ºC)", format="%.2f", help="Temperatura media"),
-        "tmin": st.column_config.NumberColumn(label="Temp. mínima (ºC)", format="%.2f", help="Temperatura mínima"),
-        "tmax": st.column_config.NumberColumn(label="Temp. máxima (ºC)", format="%.2f", help="Temperatura máxima"),
-        "prec": st.column_config.NumberColumn(label="Precip. media (mm)", format="%.2f", help="Precipitación media"),
-        "racha": st.column_config.NumberColumn(label="Racha media (km/h)", format="%.2f", help="Velocidad media del viento"),
-        "hrMedia": st.column_config.NumberColumn(label="Humedad media (%)", format="%.2f", help="Humedad relativa media")
-    } 
-
-    with tab_provincias:
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            fecha_prov = st.date_input(
-                "Selecciona una fecha:",
-                value=(date(2023, 5, 29), date(2025, 5, 28)),
-                min_value=date(2023, 5, 29),
-                max_value=date(2025, 5, 28),
-                format="DD/MM/YYYY",
-                key="fecha_prov"
-            )
-        with col2:
-            opcion_provincia = st.multiselect(
-                "Elige la provincia:",
-                df_provincias["nombre"],
-                default=None,
-                placeholder="Elige las provincias que quieras ver"
-            )
-        with col3:
-            metrica_seleccionada = st.selectbox(
-                "Selecciona la métrica a visualizar en el mapa:",
-                metricas_disponibles,
-                index=0
-            )
-
-        if fecha_prov and len(fecha_prov) == 2:
-            parametros = {"fecha_inicio": fecha_prov[0], "fecha_fin": fecha_prov[1]}
-            
-            if 'df_prov' not in st.session_state or st.session_state['prov_params'] != parametros:
-                if 'df_ccaa' not in st.session_state or st.session_state['ccaa_params'] != parametros:
-                    df = ejecutar_consulta_a_dataframe(params=parametros)
-                    st.session_state['df_ccaa'] = df
-                    st.session_state['ccaa_params'] = parametros
-                else:
-                    df = st.session_state['df_ccaa']
-                    st.session_state['df_prov'] = df
-                    st.session_state['prov_params'] = parametros
-            else:
-                df = st.session_state['df_prov']
-            
-            fecha_inicio_str = fecha_prov[0].strftime("%d/%m/%Y")
-            fecha_fin_str = fecha_prov[1].strftime("%d/%m/%Y")
-            titulo_mapa = f"Promedio de {metrica_seleccionada} por provincia seleccionada desde {fecha_inicio_str} hasta {fecha_fin_str}"
-        
-        elif fecha_prov:
-            parametros = {"fecha": fecha_prov[0]}
-            if 'df_prov' not in st.session_state or st.session_state['prov_params'] != parametros:
-                if 'df_ccaa' not in st.session_state or st.session_state['ccaa_params'] != parametros:
-                    df = ejecutar_consulta_a_dataframe(params=parametros)
-                    st.session_state['df_ccaa'] = df
-                    st.session_state['ccaa_params'] = parametros
-                else:
-                    df = st.session_state['df_ccaa']
-                    st.session_state['df_prov'] = df
-                    st.session_state['prov_params'] = parametros
-            else:
-                df = st.session_state['df_prov']
-            fecha_str = fecha_prov[0].strftime("%d/%m/%Y")
-            titulo_mapa = f"Promedio de {metrica_seleccionada} por provincia seleccionada en {fecha_str}"
-        else:
-            st.write("No se ha seleccionado ninguna fecha.")
-            df = pd.DataFrame()
-            titulo_mapa = f"Promedio de {metrica_seleccionada} por provincia seleccionada"
-
-        if not df.empty:
-            df = df.rename(columns={v["original_col"]: v["new_col"] for v in metricas_disponibles.values()})
-            columna_seleccionada = metricas_disponibles[metrica_seleccionada]["new_col"]
-            
-            if opcion_provincia:
-                df = df[df["nombre"].isin(opcion_provincia)]
-            
-            df = df.sort_values(by=columna_seleccionada, ascending=False)
-
-            st.dataframe(df, hide_index=True, use_container_width=True, column_config=
-                         {"nombre": st.column_config.TextColumn("Nombre de la provincia"),
-                        "codigo_prov": None,
-                        **columnas_st})
-            with st.spinner("Generando el mapa..."):
-                if 'fig_prov' not in st.session_state or st.session_state['prov_fig_params'] != (columna_seleccionada, titulo_mapa):
-                    fig = dibujar_coropletico_plotly(df, columna_seleccionada, titulo_mapa, nivel="provincias")
-                    st.session_state['fig_prov'] = fig
-                    st.session_state['prov_fig_params'] = (columna_seleccionada, titulo_mapa)
-                else:
-                    fig = st.session_state['fig_prov']
-            st.plotly_chart(fig, use_container_width=True)
-
-    with tab_ccaa:
-        col4, col5, col6 = st.columns(3)
-        with col4:
-            fecha_ccaa = st.date_input(
-                "Selecciona una fecha:",
-                value=(date(2023, 5, 29), date(2025, 5, 28)),
-                min_value=date(2023, 5, 29),
-                max_value=date(2025, 5, 28),
-                format="DD/MM/YYYY",
-                key="fecha_ccaa"
-            )
-        with col5:
-            opcion_comunidad = st.selectbox(
-                "Elige la comunidad:",
-                df_comunidades["nombre"],
-                index=None,
-                placeholder="Elige una comunidad"
-            )
-        with col6:
-            metrica_seleccionada = st.selectbox(
-                "Selecciona la métrica a visualizar en el mapa:",
-                metricas_disponibles,
-                index=0,
-                key='select_metrica_ccaa'
-            )
-
-        if fecha_ccaa and len(fecha_ccaa) == 2:
-            parametros = {"fecha_inicio": fecha_ccaa[0], "fecha_fin": fecha_ccaa[1]}
-            if 'df_ccaa' not in st.session_state or st.session_state['ccaa_params'] != parametros:
-                df = ejecutar_consulta_a_dataframe(params=parametros)
-                st.session_state['df_ccaa'] = df
-                st.session_state['ccaa_params'] = parametros
-            else:
-                 df = st.session_state['df_ccaa']
-            fecha_inicio_str = fecha_ccaa[0].strftime("%d/%m/%Y")
-            fecha_fin_str = fecha_ccaa[1].strftime("%d/%m/%Y")
-            titulo_mapa = f"Promedio de {metrica_seleccionada} por comunidad autónoma seleccionada desde {fecha_inicio_str} hasta {fecha_fin_str}"
-        
-        elif fecha_ccaa:
-            parametros = {"fecha": fecha_ccaa[0]}
-            
-            if 'df_ccaa' not in st.session_state or st.session_state['ccaa_params'] != parametros:
-                df = ejecutar_consulta_a_dataframe(params=parametros)
-                st.session_state['df_ccaa'] = df
-                st.session_state['ccaa_params'] = parametros
-            else:
-                 df = st.session_state['df_ccaa']
-            fecha_str = fecha_ccaa[0].strftime("%d/%m/%Y")
-            titulo_mapa = f"Promedio de {metrica_seleccionada} por comunidad autónoma seleccionada en {fecha_str}"
-        else:
-            st.write("No se ha seleccionado ninguna fecha.")
-            df = pd.DataFrame()
-            titulo_mapa = f"Promedio de {metrica_seleccionada} por comunidad autónoma seleccionada"
-
-        if not df.empty:
-            df = df.rename(columns={v["original_col"]: v["new_col"] for v in metricas_disponibles.values()})
-            columna_seleccionada = metricas_disponibles[metrica_seleccionada]["new_col"]
-
-            df_ccaa = df.merge(df_provincias[["codigo_prov", "codigo_ca"]], on="codigo_prov", how="left")
-            df_ccaa = df_ccaa.drop(columns=["nombre"])
-            
-            df_ccaa = df_ccaa.merge(df_comunidades[["codigo_ca", "nombre"]], on="codigo_ca", how="left")
-            
-
-            # if opcion_comunidad:
-                # codigo_seleccionado = df_comunidades[df_comunidades["nombre"] == opcion_comunidad]["codigo_ca"].iloc[0]
-                # df_ccaa = df_ccaa[df_ccaa["codigo_ca"] == codigo_seleccionado]
-
-            columnas_agrupables = [v['new_col'] for v in metricas_disponibles.values() if v['new_col'] in df_ccaa.columns]
-            df_ccaa = df_ccaa.groupby(["codigo_ca", "nombre"], as_index=False)[columnas_agrupables].mean()
-            
-            
-            df_ccaa = df_ccaa[["nombre"] + [col for col in df_ccaa.columns if col not in ["nombre"]]]
-
-            df_ccaa = df_ccaa.sort_values(by=columna_seleccionada, ascending=False)
-            
-            st.dataframe(df_ccaa, hide_index=True, use_container_width=True, column_config=
-                         {"nombre": st.column_config.TextColumn("Nombre de la comunidad autónoma"),
-                        "codigo_ca": None,
-                        **columnas_st})
-            
-            with st.spinner("Generando el mapa..."):
-                df_ccaa = df_ccaa.rename(columns={"codigo_ca": "cod_ccaa"})
-                
-                if 'fig_ccaa' not in st.session_state or st.session_state['ccaa_fig_params'] != (columna_seleccionada, titulo_mapa):
-                    fig = dibujar_coropletico_plotly(df_ccaa, columna_seleccionada, titulo_mapa, nivel="ccaa")
-                    st.session_state['fig_ccaa'] = fig
-                    st.session_state['ccaa_fig_params'] = (columna_seleccionada, titulo_mapa)
-                else:
-                    fig = st.session_state['fig_ccaa']
-            st.plotly_chart(fig, use_container_width=True)
+    tabs = st.tabs(["Por provincias", "Por comunidades autónomas"])
+    with tabs[0]:
+        mostrar_tab_territorial("provincia")
+    with tabs[1]:
+        mostrar_tab_territorial("ccaa")
 
     st.divider()
-    if st.button("Volver a Inicio", key="volver_inicio"):
+    if st.button("Volver a Inicio"):
         st.switch_page("Inicio.py")
 
 if __name__ == "__main__":
+    
     main()

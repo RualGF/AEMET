@@ -6,11 +6,12 @@ import json
 import streamlit as st
 
 
-@st.cache_data
+@st.cache_data(hash_funcs={dict: lambda _: None})
 def cargar_geojson_con_canarias_reubicadas(ruta_geojson):
     with open(ruta_geojson, 'r', encoding='utf-8') as f:
         geojson = json.load(f)
-
+    #print("Nombres cargados del geojson:", [f["properties"].get("name") for f in geojson["features"]])
+    
     codigos_provincias_canarias = {"35", "38"}  # Las dos provincias insulares
     codigos_ccaa_canarias = {"04"}  # Código de la CCAA Canarias en el GeoJSON de CCAA
 
@@ -91,7 +92,7 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
         geojson_key = 'properties.cod_ccaa'
         location_col = 'cod_ccaa'
         base = pd.DataFrame([
-            {'cod_ccaa': feature['properties']['cod_ccaa']}
+            {'cod_ccaa': feature['properties']['cod_ccaa'], 'nombre_ccaa': feature['properties']['name']}
             for feature in geojson_data['features']
         ])
         base['cod_ccaa'] = base['cod_ccaa'].astype(str).str.zfill(2)
@@ -99,22 +100,23 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
         
         datos['cod_ccaa'] = datos['cod_ccaa'].astype(str).str.zfill(2)
         
-        datos = datos.merge(base, on='cod_ccaa', how='left')
+        datos = base.merge(datos, on=['cod_ccaa', 'nombre_ccaa'], how='left')
+        datos = datos.rename(columns={"nombre_ccaa": "nombre"})
         
     else:
         geojson_data = geojson_provincias
         geojson_key = 'properties.cod_prov'
         location_col = 'codigo_prov'
         base = pd.DataFrame([
-            {'codigo_prov': feature['properties']['cod_prov'], 'nombre': feature['properties']['name']}
+            {'codigo_prov': feature['properties']['cod_prov'], 'nombre_prov': feature['properties']['name']}
             for feature in geojson_data['features']
         ])
         base['codigo_prov'] = base['codigo_prov'].astype(str).str.zfill(2)
         
-        
         datos['codigo_prov'] = datos['codigo_prov'].astype(str).str.zfill(2)
         
-        datos = base.merge(datos, on=['codigo_prov', 'nombre'], how='left')
+        datos = base.merge(datos, on=['codigo_prov', 'nombre_prov'], how='left')
+        datos = datos.rename(columns={"nombre_prov": "nombre"})
     
     # Añadir columna auxiliar para gestionar NaN con color gris
     datos['_valor_plot'] = datos[nombre_columna].copy().fillna(-9999)
@@ -130,12 +132,9 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
         vmin = vmin * 0.9 if vmin != 0 else -1
         vmax = vmax * 1.1 if vmax != 0 else 1
 
-    if "nombre" not in datos.columns:
-        print("Columnas disponibles:", datos.columns)
-        raise ValueError("El DataFrame debe tener una columna 'nombre' para el hover.")
-    custom_cols = ['_hover_valor']
-    if 'nombre' in datos.columns:
-        custom_cols.insert(0, 'nombre')
+    # Ahora puedes usar 'nombre' en cualquier parte
+    custom_cols = ['nombre', '_hover_valor']
+
      # Crear el mapa coroplético con hover customizado
     fig = px.choropleth(
         datos,
