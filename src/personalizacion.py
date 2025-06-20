@@ -7,15 +7,15 @@ def load_css(file_name):
     try:
         with open(file_name, "r") as f:
             css_content = f.read()
-
+        
         background_img_path = os.path.join("images", "background.jpg")
         aemet_logo_path = os.path.join("images", "aemet.png")
         bg_b64 = get_base64_image(background_img_path)
         if bg_b64:
             # Asegúrate de usar el tipo MIME correcto (jpeg, png, etc.)
-            css_content = css_content.replace('url("/images/background.jpg")', f"url('data:image/jpeg;base64,{bg_b64}')")
+            css_content = css_content.replace('url("images/background.jpg")', f"url('data:image/jpeg;base64,{bg_b64}')")
         else:
-            css_content = css_content.replace('url("/images/background.jpg")', 'none') # O un color de respaldo si no carga
+            css_content = css_content.replace('url("images/background.jpg")', 'none') # O un color de respaldo si no carga
         st.markdown(f'<style>{css_content}</style>', unsafe_allow_html=True)
 
         if aemet_logo_path:
