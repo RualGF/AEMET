@@ -10,7 +10,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
     )
 
-
+with st.sidebar:
+    if st.button("🧹 Limpiar caché y reiniciar"):
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        st.session_state.clear()
+        st.rerun()
+        
 def main():
     # Get base64 strings for images
     
@@ -45,14 +51,14 @@ def main():
         Filtra datos meteorológicos por comunidad autónoma, provincia y rango de fechas para un análisis personalizado.  
         """)
         if st.button("Ir a Datos Filtrados", key="filtrados", use_container_width=True):
-            st.switch_page("pages/2_Datos_filtrados.py")
+            st.switch_page("pages/1_EDA.py")
 
     st.markdown("""
     **Predicciones de Temperatura Media**  
     Accede a predicciones de temperatura media basadas en modelos o datos históricos.  
     """)
     if st.button("Ir a Predicciones", key="predicciones", use_container_width=True):
-        st.switch_page("pages/3_Predicciones.py")
+        st.switch_page("pages/3_Modelos.py")
 
     st.divider()
     
