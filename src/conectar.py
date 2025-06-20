@@ -1,7 +1,8 @@
 import streamlit as st
+import pandas as pd
 
 #from snowflake.snowpark.session import Session
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine,text
 
 #@st.cache_resource(show_spinner="Conectando a la base de datos...")
 def conexion_a_bd():
