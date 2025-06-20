@@ -1,66 +1,91 @@
 import pandas as pd
-import streamlit as st
 
 #from snowflake.snowpark.session import Session
-from sqlalchemy import text
-from src import conectar
+from sqlalchemy import  select, MetaData, Table
+
+from sqlalchemy.sql import Select, Executable
+
+
+from src.conectar import conexion_a_bd
 
 try:
-    motor = conectar.conexion()
-    print("Conexión a la base de datos establecida correctamente.")
+    motor = conexion_a_bd()
+    
+    meta = MetaData()
+   # Tablas SQLAlchemy para construir consultas
+    tabla_dm = Table("datos_meteorologicos", meta, autoload_with=motor)
+    tabla_prov = Table("provincias", meta, autoload_with=motor)
+    tabla_ccaa = Table("comunidades", meta, autoload_with=motor)
+
+    df_provincias = pd.read_sql_table(tabla_prov.name, motor)
+    df_comunidades = pd.read_sql_table(tabla_ccaa.name, motor)
+
 except Exception as e:
     print(f"Error al conectar a la base de datos: {e}")
     exit()
 
-@st.cache_data(show_spinner="Cargando datos desde la base de datos...")
+
 # Función para ejecutar una consulta y obtener un DataFrame
 
-def ejecutar_consulta_a_dataframe(consulta_recibida: str = "", params: dict = {}) -> pd.DataFrame:
+def construir_consulta_general(params: dict) -> Select:
     """
-    Ejecuta una consulta SQL en la base de datos y devuelve los resultados en un DataFrame de pandas.
+    Construye una consulta SQLAlchemy dinámica basada en los parámetros recibidos.
 
     Args:
-        consulta_recibida (str): La consulta SQL a ejecutar.
+        params (dict): Diccionario con claves:
+            - select: lista de columnas o expresiones a seleccionar.
+            - join: lista con 'provincia' y/o 'ccaa' si se requieren joins.
+            - filters: lista de condiciones opcionales.
+            - group_by: lista de columnas para agrupamiento.
+            - order_by: lista de columnas para ordenar.
 
     Returns:
-        pd.DataFrame: Un DataFrame de pandas con los resultados de la consulta.
-                      Devuelve un DataFrame vacío si no hay resultados o si ocurre un error.
+        Select: Consulta SQLAlchemy.
     """
-    # Cadena de conexión para MySQL usando PyMySQL
 
+    # FROM base
+    dm = tabla_dm
+    pr = tabla_prov
+    ca = tabla_ccaa
+    from_clause = dm
+
+    if "join" in params:
+        if "provincia" in params["join"]:
+            from_clause = from_clause.join(pr, dm.c.codigo_prov == pr.c.codigo_prov)
+        if "ccaa" in params["join"]:
+            from_clause = from_clause.join(ca, pr.c.codigo_ca == ca.c.codigo_ca)
+
+    stmt = select(*params.get("select", [dm]))  # Por defecto selecciona todo
+    stmt = stmt.select_from(from_clause)
+
+    if "filters" in params:
+        for condition in params["filters"]:
+            stmt = stmt.where(condition)
+
+    if "group_by" in params:
+        stmt = stmt.group_by(*params["group_by"])
+
+    if "order_by" in params:
+        stmt = stmt.order_by(*params["order_by"])
+
+    return stmt
+
+def ejecutar_consulta_a_dataframe(consulta: Executable, **bindparams) -> pd.DataFrame:
+    """
+    Ejecuta una consulta SQLAlchemy usando un conector global y devuelve los resultados en un DataFrame.
+
+    Args:
+        consulta (Executable): Consulta SQLAlchemy (select, insert, etc.)
+        **bindparams: Parámetros para bindparam(), si aplica.
+
+    Returns:
+        pd.DataFrame: Resultados de la consulta.
+    """
     try:
-        if consulta_recibida:
-            df_resultado = pd.read_sql(text(consulta_recibida), motor)
-            print(
-                f"\nConsulta ejecutada con éxito. Se recuperaron {len(df_resultado)} filas."
-            )
-            return df_resultado
-        else:
-            consulta = """
-            SELECT p.nombre,
-            d.codigo_prov,
-            AVG(d.altitud), 
-            AVG(d.tmed),
-            AVG(d.tmin),
-            AVG(d.tmax),
-            AVG(d.prec),
-            AVG(d.racha) * 3.6,
-            AVG(d.hrMedia)
-            FROM datos_meteorologicos as d, provincias as p
-            WHERE (d.codigo_prov = p.codigo_prov)
-            """
-            if params:
-                for p in params:
-                    if p == "fecha":
-                        consulta = consulta + f" AND (d.fecha = '{params[p]}')"
-                    elif p == "fecha_inicio":
-                        consulta = consulta + f" AND (d.fecha BETWEEN '{params['fecha_inicio']}' AND '{params['fecha_fin']}')"
-            consulta = consulta + " GROUP BY d.codigo_prov, p.nombre ORDER BY d.codigo_prov;"
-            df_resultado = ejecutar_consulta_a_dataframe(consulta)
-            print(
-                f"\nConsulta ejecutada con éxito. Se recuperaron {len(df_resultado)} filas."
-            )
-            return df_resultado
+        with motor.begin() as conn:
+            result = conn.execute(consulta, bindparams)
+            df = pd.DataFrame(result.fetchall(), columns=list(result.keys()))
+        return df
     except Exception as e:
-        print(f"Error al ejecutar la consulta:\n{consulta_recibida}\nError: {e}")
-        return pd.DataFrame()  # Devuelve un DataFrame vacío en caso de error
+        print(f"Error al ejecutar la consulta: {e}")
+        return pd.DataFrame()
