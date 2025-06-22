@@ -1,9 +1,9 @@
-
 name: Actualizar datos diarios
 
 on:
   schedule:
     - cron: '0 6 * * *'  # a las 6 AM UTC
+  workflow_dispatch:    
 
 jobs:
   extract:
@@ -21,6 +21,7 @@ jobs:
         run: |
           jupyter nbconvert --to script "notebooks/Extraccion diaria actualizada.ipynb"
           python notebooks/Extraccion\ diaria\ actualizada.py
+
 
 
 
