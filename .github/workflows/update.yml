@@ -1,33 +1,27 @@
-name: Actualizar datos AEMET
+
+name: Actualizar datos diarios
 
 on:
   schedule:
-    - cron: '0 2 * * *'
-  workflow_dispatch:
+    - cron: '0 6 * * *'  # a las 6 AM UTC
 
 jobs:
-  update-data:
+  extract:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
-
+      - name: Activar entorno virtual
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
       - name: Instalar dependencias
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-
       - name: Ejecutar extracción diaria
         run: |
-          jupyter nbconvert \
-            --ExecutePreprocessor.timeout=600 \
-            --to notebook \
-            --execute "notebooks/Extraccion diaria actualizada.ipynb" \
-            --output "notebooks/Extraccion diaria actualizada.ipynb"
+          jupyter nbconvert --to script "notebooks/Extraccion diaria actualizada.ipynb"
+          python notebooks/Extraccion\ diaria\ actualizada.py
 
-      - name: Commit y push de resultados
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: 'Actualización diaria de datos AEMET'
-          file_pattern: 'notebooks/Extraccion diaria actualizada.ipynb,data/*.csv'
-          branch: Jorge
+
+
+
