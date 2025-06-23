@@ -571,7 +571,7 @@
       "properties": {
         "cod_ccaa": "07",
         "noml_ccaa": "COMUNIDAD DE CASTILLA Y LEON",
-        "name": "Castilla-León",
+        "name": "Castilla y León",
         "cartodb_id": 7,
         "created_at": "2014-09-30T00:00:00Z",
         "updated_at": "2014-12-25T02:07:41Z"
@@ -44428,7 +44428,7 @@
       "properties": {
         "cod_ccaa": "06",
         "noml_ccaa": "COMUNIDAD AUTONOMA DE CASTILLA-LA MANCHA",
-        "name": "Castilla-La Mancha",
+        "name": "Castilla - La Mancha",
         "cartodb_id": 6,
         "created_at": "2014-09-30T00:00:00Z",
         "updated_at": "2014-12-25T02:07:41Z"
