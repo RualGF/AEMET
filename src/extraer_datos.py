@@ -1,7 +1,10 @@
 import pandas as pd
+import streamlit as st
+from datetime import date, datetime
 
-#from snowflake.snowpark.session import Session
-from sqlalchemy import  select, MetaData, Table
+# from snowflake.snowpark.session import Session
+from sqlalchemy import select, MetaData, Table, func
+from sqlalchemy.exc import OperationalError
 
 from sqlalchemy.sql import Select, Executable
 
@@ -10,9 +13,9 @@ from src.conectar import conexion_a_bd
 
 try:
     motor = conexion_a_bd()
-    
+
     meta = MetaData()
-   # Tablas SQLAlchemy para construir consultas
+    # Tablas SQLAlchemy para construir consultas
     tabla_dm = Table("datos_meteorologicos", meta, autoload_with=motor)
     tabla_prov = Table("provincias", meta, autoload_with=motor)
     tabla_ccaa = Table("comunidades", meta, autoload_with=motor)
@@ -20,12 +23,13 @@ try:
     df_provincias = pd.read_sql_table(tabla_prov.name, motor)
     df_comunidades = pd.read_sql_table(tabla_ccaa.name, motor)
 
-except Exception as e:
+except OperationalError as e:
     print(f"Error al conectar a la base de datos: {e}")
     exit()
 
 
 # Función para ejecutar una consulta y obtener un DataFrame
+
 
 def construir_consulta_general(params: dict) -> Select:
     """
@@ -70,6 +74,7 @@ def construir_consulta_general(params: dict) -> Select:
 
     return stmt
 
+
 def ejecutar_consulta_a_dataframe(consulta: Executable, **bindparams) -> pd.DataFrame:
     """
     Ejecuta una consulta SQLAlchemy usando un conector global y devuelve los resultados en un DataFrame.
@@ -89,3 +94,48 @@ def ejecutar_consulta_a_dataframe(consulta: Executable, **bindparams) -> pd.Data
     except Exception as e:
         print(f"Error al ejecutar la consulta: {e}")
         return pd.DataFrame()
+
+def generar_df_cache(clave_df, clave_params, stmt_conf, **params):
+    """
+    Devuelve un DataFrame ejecutando una consulta si no hay cache o cambian los parámetros.
+
+    - clave_df: nombre para guardar el DataFrame en session_state
+    - clave_params: nombre para guardar los parámetros previos
+    - stmt_conf: configuración de la consulta SQL
+    - params: parámetros como fecha_inicio, fecha_fin, etc.
+    """
+    if clave_df not in st.session_state or st.session_state.get(clave_params) != params:
+        consulta = construir_consulta_general(stmt_conf)
+        st.write(f"Ejecutando consulta SQL para '{clave_df}' con parámetros:", params)
+        df = ejecutar_consulta_a_dataframe(consulta, **params)
+        st.session_state[clave_df] = df
+        st.session_state[clave_params] = params
+    else:
+        st.write(f"Usando cache para '{clave_df}'")
+
+    return st.session_state[clave_df]
+
+@st.cache_data(ttl=3600)  # Cache por 1 hora para no llamar a la BD constantemente
+def obtener_rango_de_fechas():
+    """
+    Consulta la base de datos para obtener la fecha mínima y máxima de los registros.
+    Usa el cache de Streamlit para eficiencia.
+    """
+    try:
+        with motor.connect() as connection:
+            # Construye la consulta para obtener min y max fecha
+            stmt = select(func.min(tabla_dm.c.fecha), func.max(tabla_dm.c.fecha))
+            result = connection.execute(stmt).fetchone()
+
+            if result and result[0] and result[1]:
+                # Asegura que los valores devueltos sean objetos `date`
+                min_db_date = result[0].date() if isinstance(result[0], datetime) else result[0]
+                max_db_date = result[1].date() if isinstance(result[1], datetime) else result[1]
+                return min_db_date, max_db_date
+            else:
+                # Fallback si la tabla está vacía
+                return date(2023, 1, 1), date.today()
+    except Exception as e:
+        st.error(f"Error al consultar rango de fechas: {e}")
+        # Fallback en caso de error de conexión
+        return date(2023, 1, 1), date.today()
