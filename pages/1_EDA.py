@@ -1,19 +1,19 @@
-from datetime import date
 import pandas as pd
 import streamlit as st
 from sqlalchemy import func, bindparam, Float
 
 
 from src.extraer_datos import (
-    construir_consulta_general, ejecutar_consulta_a_dataframe,
-    df_provincias, df_comunidades, tabla_dm
+    df_provincias,
+    df_comunidades, tabla_dm, generar_df_cache, obtener_rango_de_fechas
 )
+
 from src.coroplet import dibujar_coropletico_plotly
 from src.personalizacion import load_css
 
 st.set_page_config(
     page_title="EDA",
-    page_icon="🧹",
+    page_icon="📈",
     layout="wide",
     initial_sidebar_state="collapsed"
     )
@@ -50,25 +50,8 @@ columnas_st = {
 
 metricas_orden = [v["col"] for v in metricas_disponibles.values()]
 
-def generar_df_cache(clave_df, clave_params, stmt_conf, **params):
-    """
-    Devuelve un DataFrame ejecutando una consulta si no hay cache o cambian los parámetros.
+fecha_inicio, fecha_fin = obtener_rango_de_fechas()
 
-    - clave_df: nombre para guardar el DataFrame en session_state
-    - clave_params: nombre para guardar los parámetros previos
-    - stmt_conf: configuración de la consulta SQL
-    - params: parámetros como fecha_inicio, fecha_fin, etc.
-    """
-    if clave_df not in st.session_state or st.session_state.get(clave_params) != params:
-        consulta = construir_consulta_general(stmt_conf)
-        st.write(f"Ejecutando consulta SQL para '{clave_df}' con parámetros:", params)
-        df = ejecutar_consulta_a_dataframe(consulta, **params)
-        st.session_state[clave_df] = df
-        st.session_state[clave_params] = params
-    else:
-        st.write(f"Usando cache para '{clave_df}'")
-
-    return st.session_state[clave_df]
 
 def mostrar_tab_territorial(nivel: str):
     """
@@ -81,9 +64,9 @@ def mostrar_tab_territorial(nivel: str):
     with col1:
         fechas = st.date_input(
             "Selecciona un rango de fechas:",
-            value=(date(2023, 5, 29), date(2025, 5, 28)),
-            min_value=date(2023, 5, 29),
-            max_value=date(2025, 5, 28),
+            value=(fecha_inicio, fecha_fin),
+            min_value=fecha_inicio,
+            max_value=fecha_fin,
             format="DD/MM/YYYY",
             key=f"fecha_{nivel}"
         )
@@ -137,18 +120,19 @@ def mostrar_tab_territorial(nivel: str):
                 df = df.rename(columns={"codigo_ca": "cod_ccaa"})
                 nombre_col = "nombre_ccaa"
                 cod_col = "cod_ccaa"
+                texto_columna = "Comunidad Autónoma"
             else:
                 nombre_col = "nombre_prov"
                 cod_col = "codigo_prov"
                 columnas = [col for col in metricas_orden if col in df.columns]
+                texto_columna = "Provincia"
 
             # Ordenar
             df = df.sort_values(by=columna, ascending=False)
             df = df[[nombre_col, cod_col] + columnas]
-            st.write(df_comunidades["nombre_ccaa"])
-
+            
             st.dataframe(df, use_container_width=True, hide_index=True, column_config={
-                nombre_col: st.column_config.TextColumn("Nombre de la comunidad"),
+                nombre_col: st.column_config.TextColumn(texto_columna),
                 cod_col: None,
                 **columnas_st
             })
