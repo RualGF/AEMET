@@ -1,10 +1,9 @@
 import streamlit as st
-import pandas as pd
 
 #from snowflake.snowpark.session import Session
-from sqlalchemy import create_engine,text
+from sqlalchemy import create_engine
 
-#@st.cache_resource(show_spinner="Conectando a la base de datos...")
+@st.cache_resource(show_spinner="Conectando a la base de datos...")
 def conexion_a_bd():
     """Retorna una nueva conexión desde el motor."""
     usuario = st.secrets["database"]["user"]

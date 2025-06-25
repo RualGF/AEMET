@@ -5,10 +5,12 @@ from sqlalchemy import func, bindparam, Float
 
 from src.extraer_datos import (
     df_provincias,
-    df_comunidades, tabla_dm, generar_df_cache, obtener_rango_de_fechas
+    df_comunidades, 
+    tabla_dm, 
+    generar_df_cache, obtener_rango_de_fechas, obtener_datos_diarios_filtrados
 )
 
-from src.coroplet import dibujar_coropletico_plotly
+from src.dibujar import dibujar_coropletico_plotly, dibujar_grafico_lineas_evolucion
 from src.personalizacion import load_css
 
 st.set_page_config(
@@ -152,12 +154,43 @@ def mostrar_tab_territorial(nivel: str):
                 st.session_state[cache_fig_key] = fig
                 st.session_state[cache_fig_params_key] = params_fig
             
-            st.spinner("Cargando mapa...")
-            st.write(f"Mostrando {len(df)} registros tras filtros.")
+            # --- Obtener datos diarios para el gráfico de líneas ---
+            # Necesitamos el nombre de la columna de la métrica (ej. 'tmed')
+            metrica_col_name_for_daily = metrica_conf["col"]
+            
+            # Determinar la lista de filtros para la consulta de datos diarios
+            filter_list_for_daily = []
+            if nivel == "provincia" and filtro:
+                filter_list_for_daily = filtro # Esto ya es una lista de nombres de provincia
+            elif nivel == "ccaa" and filtro:
+                filter_list_for_daily = filtro # Esto ya es una lista de nombres de CCAA 
+
+            # Llamar a la nueva función para obtener los datos diarios
+            df_lineas = obtener_datos_diarios_filtrados(fechas, nivel, filter_list_for_daily, metrica_col_name_for_daily)
+
+            # Guardar todos los parámetros necesarios para el gráfico de líneas en un único diccionario
+            # Solo se guarda si hay elementos seleccionados en el filtro
+            if filtro: # Solo guardar si hay provincias/comunidades seleccionadas
+                st.session_state['line_plot_params'] = {
+                    "df": df_lineas,
+                    "metric_col": metrica_conf["col"],
+                    "display_name": metrica, # El nombre que ve el usuario, ej: "Temp. media (ºC)"
+                    "level": nivel,
+                    "name_col": nombre_col # nombre_prov o nombre_ccaa
+                }
+            else:
+                # Si no hay filtro, limpiar los parámetros del gráfico de líneas para que no se muestre
+                if 'line_plot_params' in st.session_state:
+                    del st.session_state['line_plot_params']
+
+            with st.sidebar:
+                st.spinner("Cargando mapa...")
+                st.write(f"Mostrando {len(df)} registros tras filtros.")
             st.plotly_chart(st.session_state[cache_fig_key], use_container_width=True)
 
 
 def main():
+      
     tabs = st.tabs(["Por provincias", "Por comunidades autónomas"])
     with tabs[0]:
         mostrar_tab_territorial("provincia")
@@ -165,9 +198,21 @@ def main():
         mostrar_tab_territorial("ccaa")
 
     st.divider()
+    
+    # Sección para el gráfico de líneas de evolución (solo si hay parámetros válidos)
+    if 'line_plot_params' in st.session_state and not st.session_state['line_plot_params']['df'].empty:
+        # El expander se abre automáticamente si hay datos para mostrar
+        with st.expander("Ver evolución diaria de la métrica seleccionada", expanded=True):
+            params = st.session_state['line_plot_params']
+            with st.spinner("Generando gráfico de líneas..."):
+                fig_lineas = dibujar_grafico_lineas_evolucion(
+                    params['df'], params['metric_col'], params['display_name'],
+                    params['level'], params['name_col'], metricas_disponibles
+                )
+                st.plotly_chart(fig_lineas, use_container_width=True)
+    
     if st.button("Volver a Inicio"):
-        st.switch_page("Inicio.py")
-
+            st.switch_page("Inicio.py")
 if __name__ == "__main__":
     
     main()

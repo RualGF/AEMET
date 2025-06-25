@@ -14,8 +14,8 @@ from keras.layers import GRU, Dense
 from keras.callbacks import EarlyStopping
 
 from sqlalchemy import select
-from extraer_datos import tabla_dm
-from conectar import conexion_a_bd
+from src.extraer_datos import tabla_dm
+from src.conectar import conexion_a_bd
 
 pio.renderers.default = "browser"
 
@@ -153,7 +153,7 @@ for clust in clusters:
         batch_size=BATCH_SIZE,
         validation_data=(X_val, y_val),
         callbacks=[parada],
-        verbose="1",
+        verbose=1
     )
 
     # Predicción ONE-STEP
@@ -167,7 +167,7 @@ for clust in clusters:
     resultados.append((clust, next_value_real))
 
     # Guardar modelo y scaler
-    model.save(f"{OUTPUT_DIR}/modelo_cluster_{clust}.h5")
+    model.save(f"{OUTPUT_DIR}/modelo_cluster_{clust}.keras")
     joblib.dump(scaler, f"{OUTPUT_DIR}/scaler_cluster_{clust}.pkl")
 
     print(f"✅ Clúster {clust} → Predicción tmed: {next_value_real:.1f}°C")
