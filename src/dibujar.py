@@ -70,7 +70,7 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
     texto_titulo: título del gráfico.
     etiqueta_leyenda: texto para la barra de color.
     """
-    
+    st.spinner("Cargando mapa...")
     variables_config = {
         'tmed':    {'color': 'RdBu_r', 'label': 'Temp. media',     'unidad': '°C'},
         'tmin':    {'color': 'RdBu_r', 'label': 'Temp. mínima',    'unidad': '°C'},
@@ -196,3 +196,43 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
     )
 
     return fig
+
+def dibujar_grafico_lineas_evolucion(df_original, metrica_col, titulo_metrica, nivel, nombre_col, metricas_disponibles):
+    """
+    Dibuja un gráfico de líneas mostrando la evolución diaria de una métrica.
+    """
+    # Asegurarse de que 'fecha' sea datetime para el eje X y ordenar para el gráfico de líneas
+    
+    df_original["fecha"] = pd.to_datetime(df_original["fecha"])
+    df_original = df_original.sort_values(by=["fecha", nombre_col])
+
+    # Obtener la unidad de la métrica para el títulopara el hover
+    unidad_metrica = metricas_disponibles.get(titulo_metrica, {}).get('unidad', '')
+
+    fig = go.Figure()
+    
+    # Iterar sobre cada entidad única y añadir una traza
+    for nombre_entidad in df_original[nombre_col].unique():
+        df_entidad = df_original[df_original[nombre_col] == nombre_entidad]
+        fig.add_trace(go.Scatter(
+            x=df_entidad["fecha"],
+            y=df_entidad[metrica_col],
+            mode='lines',
+            name=nombre_entidad, # Nombre de la entidad para la leyenda
+            hovertemplate=f"<b>{nombre_entidad}</b><br>" +
+                          "<b>Fecha</b>: %{{x|%d/%m/%Y}}<br>" +
+                          f"<b>{titulo_metrica}</b>: %{{y:.2f}} {unidad_metrica}<extra></extra>"
+        ))
+
+    # Actualizar el layout
+    fig.update_layout(
+        title=f"Evolución diaria de {titulo_metrica} por {'provincias' if nivel == 'provincia' else 'comunidades autónomas'}", # Título más robusto
+        xaxis_title="Fecha",
+        yaxis_title=f"{titulo_metrica} ({unidad_metrica})", # Título del eje Y con unidad
+        hovermode="x unified", # Hover unificado para ver todos los datos en una fecha
+        legend_title_text=f"{nivel.capitalize()}", # Título de la leyenda
+        height=500 # Altura fija para un solo plot
+    )
+
+    return fig
+
