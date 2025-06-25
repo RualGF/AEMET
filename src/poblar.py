@@ -2,16 +2,22 @@ import argparse
 import pandas as pd
 
 from sqlalchemy import (
-    MetaData, Table, Column, String, Date, TIMESTAMP, Float, ForeignKey, Connection
+    MetaData, Table, Column, String, Date, TIMESTAMP, Float, ForeignKey, Connection, create_engine
 )
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.exc import IntegrityError
 
-from src.conectar import conexion_a_bd
+#from conectar import conexion_a_bd
 
 
 
-motor = conexion_a_bd()
+#motor = conexion_a_bd()
+user = "root"
+pw = "s41nt"
+bd = "aemet"
+host = "localhost"
+port = 3306
+motor = create_engine(f"mysql+pymysql://{user}:{pw}@{host}:{port}/{bd}") 
 
 # --- Definición de Tablas y Metadatos ---
 meta = MetaData()
@@ -115,11 +121,12 @@ def poblar_estaciones(conector: Connection, df_estaciones: pd.DataFrame):
     print("ℹ️  Iniciando procesamiento de estaciones...")
     df_provincias_bd = pd.read_sql_table(tabla_prov.name, conector)
 
+       
     # Unir para obtener codigo_prov de forma eficiente
     df_est_merged = pd.merge(
         df_estaciones,
         df_provincias_bd[['codigo_prov', 'nombre_prov']],
-        left_on='nombre_prov',
+        left_on='provincia',
         right_on='nombre_prov',
         how='left'
     )
@@ -138,9 +145,10 @@ def poblar_estaciones(conector: Connection, df_estaciones: pd.DataFrame):
     print(f"🚀 Procesando {total} registros de estaciones...")
     
     for row in registros_para_procesar:
+        print(row)
         registro_limpio = {
-            "codigo_indicativo": row["codigo_indicativo"],
-            "nombre_estacion": row["nombre_estacion"],
+            "codigo_indicativo": row["indicativo"],
+            #"nombre_estacion": row["nombre_estacion"],
             "codigo_prov": row["codigo_prov"],
             "start_date": row.get("start_date"),
             "end_date": row.get("end_date"),
@@ -156,7 +164,8 @@ def poblar_estaciones(conector: Connection, df_estaciones: pd.DataFrame):
             conector.execute(
                 tabla_est.update()
                 .where(tabla_est.c.codigo_indicativo == registro_limpio["codigo_indicativo"])
-                .values(cluster=registro_limpio["cluster"])
+                #.values(cluster=registro_limpio["cluster"])
+                .values(**registro_limpio)
             )
         except Exception as e:
             print(f"❌ Error procesando estación {registro_limpio['codigo_indicativo']}: {e}")
@@ -235,7 +244,7 @@ def main(ruta_pkl: str, tabla_a_poblar: str, ruta_csv_estaciones: str):
     Función principal que orquesta la creación y población de las tablas.
 
     """
-    motor = conexion_a_bd()
+    #motor = conexion_a_bd()
     
     # Crear todas las tablas si no existen
     print("Creando tablas si no existen...")
@@ -290,7 +299,7 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--csv_estaciones",
-        default="data/estaciones.csv",
+        default=r"C:\Users\rualg\Downloads\estaciones_nombre_indicativo.csv",
         help="Ruta al archivo .csv con la información de las estaciones."
     )
     args = parser.parse_args()

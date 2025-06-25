@@ -173,7 +173,11 @@ def prophet_page():
         )
         
         run_prediction = st.button(f"Generar Predicción para {nombre_estacion_seleccionada}", type="primary")
-
+    
+    if st.button("Limpiar Cache de Datos"):
+            st.cache_data.clear()
+            st.success("Cache de datos limpiado. Por favor, vuelva a generar la predicción.")
+    
     if run_prediction:
         indicativo_seleccionado = estaciones_dict[nombre_estacion_seleccionada]
         periods_to_forecast = horizon_options[horizon_selection]
