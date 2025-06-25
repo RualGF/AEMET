@@ -7,6 +7,8 @@ from src.conectar import conexion_a_bd
 from src.poblar import poblar_datos_meteorologicos
 from src.actualizar_api import descargar_nuevos_datos_aemet
 
+
+
 st.set_page_config(
     page_title="Proyecto Grupo D",
     page_icon="🌡️",
@@ -97,28 +99,34 @@ def main():
         # """)
         # if st.button("Ir a Datos Filtrados", key="filtrados", use_container_width=True):
         #     st.switch_page("pages/1_EDA.py")
-
     with col3:
-         with st.container(border=True):
-            st.markdown("##### 🤖 Modelos")
-            st.markdown("Modelos precargados para predicciones")
-            if st.button("Ir a modelos", key="modelos", use_container_width=True):
-                st.switch_page("pages/3_Modelos.py")
-
-    st.divider()
-    col4, col5 = st.columns(2, gap="large")
-    with col4:
         with st.container(border=True):
             st.markdown("##### 🗄️ Base de datos")
             st.markdown("Estructura y esquema de la base de datos")
             if st.button("Ir a base de datos", key="bd", use_container_width=True):
-                st.switch_page("pages/4_Base_de_datos.py")
+                st.switch_page("pages/5_Base_de_datos.py")
+    
+
+    st.divider()
+    col4, col5, col6 = st.columns(3, gap="large")
+    with col4:
+         with st.container(border=True):
+            st.markdown("##### 🤖 Modelos GRU y NN")
+            st.markdown("Modelos precargados de deep learning para predicciones")
+            if st.button("Ir a modelos", key="modelos", use_container_width=True):
+                st.switch_page("pages/3_Modelos_DL.py")
     with col5:
+        with st.container(border=True):
+            st.markdown("##### 🔮 Modelos Prophet")
+            st.markdown("Modelos precargados de prophet para predicciones")
+            if st.button("Ir a propeth", key="prophet", use_container_width=True):
+                st.switch_page("pages/4_Modelo_Prophet.py")
+    with col6:
         with st.container(border=True):
             st.markdown("##### 👥 Sobre nosotros")
             st.markdown("Información sobre los desarrolladores del proyecto")
             if st.button("Ir a sobre nosotros", key="nosotros", use_container_width=True):
-                st.switch_page("pages/5_Sobre_nosotros.py")
+                st.switch_page("pages/6_Sobre_nosotros.py")
     
     st.markdown("""
     ### Sobre esta aplicación
