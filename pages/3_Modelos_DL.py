@@ -104,7 +104,7 @@ def load_model_and_metrics(model_name, cluster_id):
     # Métricas de ejemplo. Cárgalas desde un archivo o defínelas aquí.
     metrics = {
         "GRU": {"RMSE": 6.5, "MAE": 4.9, "R²": 0.82}, # Estas métricas deberían ser reales del modelo cargado
-        "Red Neuronal (NN)": {"RMSE": 7.1, "MAE": 5.5, "R²": 0.79}, # Estas métricas deberían ser reales del modelo cargado
+        "NN": {"RMSE": 7.1, "MAE": 5.5, "R²": 0.79}, # Estas métricas deberían ser reales del modelo cargado
     }
 
     model = None
@@ -114,8 +114,8 @@ def load_model_and_metrics(model_name, cluster_id):
     # Asegúrate de que tus modelos y scalers estén guardados en la ruta correcta.
     
     # Ejemplo de cómo cargar un modelo y scaler por cada clúster:
-    model_path = f'modelos/modelos_dl/{model_name.lower()}_cluster_{cluster_id}.keras'
-    scaler_path = f'modelos/modelos_dl/{model_name.lower()}_scaler_cluster_{cluster_id}.pkl'
+    model_path = f'modelos/modelos_dl/{model_name}_cluster_{cluster_id}.keras'
+    scaler_path = f'modelos/modelos_dl/{model_name}_scaler_cluster_{cluster_id}.pkl'
     
     try:
         model = load_keras_model(model_path)
@@ -134,7 +134,7 @@ def load_model_and_metrics(model_name, cluster_id):
     return model, scaler, pd.DataFrame([metrics[model_name]])
 
 
-def make_dl_prediction(model, scaler, data, periods, mae, look_back=30, target_col_idx=0):
+def make_dl_prediction(model, scaler, data, periods, mae, look_back=30, model_name=None):
     """
     Realiza predicciones con modelos de Deep Learning (GRU/NN) de forma recursiva.
     Ahora incluye predicciones "in-sample" para mostrar el ajuste del modelo.
@@ -153,11 +153,17 @@ def make_dl_prediction(model, scaler, data, periods, mae, look_back=30, target_c
     # --- 1. Definición de Características y Setup ---
     # ¡CRÍTICO! El orden y el contenido de esta lista deben coincidir EXACTAMENTE
     # con las columnas del DataFrame que se usó para entrenar (hacer .fit()) el scaler.
-    features_to_scale = ['altitud', 'tmed', 'tmin', 'tmax', 'prec', 'racha', 'hrMedia']
     columna_objetivo = 'tmed'
+    if model_name == "GRU":
+        features_to_scale = ['altitud', 'tmed', 'tmin', 'tmax', 'prec', 'racha', 'hrMedia']
+        features_for_model = [col for col in features_to_scale if col != columna_objetivo]
+    else:
+        features_to_scale = ['tmed']
+        features_for_model = [columna_objetivo]
+    
     
     # Las características para el modelo son todas menos el objetivo.
-    features_for_model = [col for col in features_to_scale if col != columna_objetivo]
+    
 
     # El índice de la columna objetivo dentro de la lista completa de características escaladas
     tmed_feature_index_in_scaler = features_to_scale.index(columna_objetivo)
@@ -167,8 +173,17 @@ def make_dl_prediction(model, scaler, data, periods, mae, look_back=30, target_c
     # --- 2. Predicción In-Sample (sobre datos históricos para ver el ajuste) ---
     scaled_data_full = scaler.transform(data[features_to_scale])
     scaled_df_full = pd.DataFrame(scaled_data_full, columns=features_to_scale)
-    X_hist, _ = create_sequences(scaled_df_full, columna_objetivo, look_back)
-    yhat_hist_scaled = model.predict(X_hist, verbose=0)
+
+      # Crear secuencias para los datos históricos según el tipo de modelo (univariado vs multivariado)
+    if model_name == "NN": # Caso univariado: la entrada es solo la columna objetivo
+        X_hist_list = []
+        for i in range(len(scaled_df_full) - look_back):
+            # Reshape a (look_back, 1) para entrada univariada
+            X_hist_list.append(scaled_df_full[columna_objetivo].iloc[i:i+look_back].values.reshape(look_back, 1))
+        X_hist = np.array(X_hist_list)
+    else: # GRU (Caso multivariado)
+        X_hist, _ = create_sequences(scaled_df_full, columna_objetivo, look_back)
+    yhat_hist_scaled = model.predict(X_hist, verbose=1)
     
     dummy_for_descale = np.zeros((len(yhat_hist_scaled), len(features_to_scale)))
     dummy_for_descale[:, tmed_feature_index_in_scaler] = yhat_hist_scaled.flatten()
@@ -180,9 +195,12 @@ def make_dl_prediction(model, scaler, data, periods, mae, look_back=30, target_c
     # --- 3. Predicción Out-of-Sample (Pronóstico futuro recursivo) ---
 
     # Selecciona las últimas 'look_back' filas de TODAS las características necesarias
-    last_sequence_full_features = data[features_to_scale].values[-look_back:]
-    
-    last_sequence_scaled_full = scaler.transform(last_sequence_full_features)    
+    if model_name == "NN": # Caso univariado: solo tmed es relevante para la última secuencia
+        last_sequence_full_features = data[[columna_objetivo]].values[-look_back:]
+    else: # GRU (Caso multivariado)
+        last_sequence_full_features = data[features_to_scale].values[-look_back:]
+
+    last_sequence_scaled_full = scaler.transform(last_sequence_full_features)  
     
     # Obtiene los índices de las columnas que el modelo necesita como entrada (ej. 7 características)
 
@@ -247,30 +265,31 @@ def make_dl_prediction(model, scaler, data, periods, mae, look_back=30, target_c
 
         next_features_original_for_input_dict = {}
         
-        next_features_original_for_input_dict['altitud'] = last_known_altitud
-        
-        current_month = current_forecast_date.month
+        if model_name == "GRU": # Solo para modelos multivariados, estas características son entradas
+            next_features_original_for_input_dict['altitud'] = last_known_altitud
+            current_month = current_forecast_date.month
         
         # --- DEPURACIÓN: IMPRIMIR VALORES FUTUROS DE LAS ENTRADAS ---
         #current_step_features_info = {f: None for f in avg_seasonal_features_cols} # Para almacenar los valores que se usarán
         
-        for feat in avg_seasonal_features_cols:
-            if current_month in avg_seasonal_features.index:
-                # Corrección: Asignar el valor recuperado a la variable 'value' ANTES de usarla para la depuración
-                value = avg_seasonal_features.loc[current_month, feat]
-                next_features_original_for_input_dict[feat] = value
-
-            else:
-                # Si el mes no tiene promedio histórico, usar el promedio general
-                value = df_hist_copy[feat].mean()
-                next_features_original_for_input_dict[feat] = value
-
-        # if i < 5 or i >= periods - 5: # También para las 5 primeras y 5 últimas
-        #      print(f"Entradas p/{current_forecast_date.strftime('%Y-%m-%d')}: Alt={last_known_altitud:.2f}, " + 
-        #            ", ".join([f"{f}={current_step_features_info[f]}" for f in avg_seasonal_features_cols]))
-
-        next_features_original_for_input = np.array([next_features_original_for_input_dict[f] for f in features_for_model])
-
+             
+            # Estas características estacionales solo son relevantes para GRU (multivariado)
+            for feat in avg_seasonal_features_cols:
+                if current_month in avg_seasonal_features.index:
+                    value = avg_seasonal_features.loc[current_month, feat]
+                    next_features_original_for_input_dict[feat] = value
+                else:
+                    value = df_hist_copy[feat].mean()
+                    next_features_original_for_input_dict[feat] = value
+            
+            # Para GRU, next_features_original_for_input incluye todas las características exógenas
+            next_features_original_for_input = np.array([next_features_original_for_input_dict[f] for f in features_for_model])
+            
+        else: # model_name == "NN" (Univariado)
+            # Para NN, la única entrada es la tmed predicha del paso anterior.
+            # No se usan otras características externas como entrada al modelo.
+            next_features_original_for_input = np.array([predicted_tmed]) # Solo tmed como entrada
+        
         dummy_row_original_for_scaler = np.zeros(len(features_to_scale)) 
 
         for j, feature_name in enumerate(features_for_model):
@@ -347,7 +366,7 @@ def dl_models_page():
         if st.button("Limpiar Cache de Datos"):
             st.cache_data.clear()
             st.success("Cache de datos limpiado. Por favor, vuelva a generar la predicción.")
-            
+
     # --- Lógica de predicción y visualización (FUERA de la sidebar) ---
     if run_prediction:
         indicativo_seleccionado = estaciones_dict[nombre_estacion_seleccionada]
@@ -375,7 +394,7 @@ def dl_models_page():
                 # Asegúrate de pasar el DataFrame 'df_hist' a make_dl_prediction
                 # con todas las columnas necesarias ('fecha', 'tmed', 'altitud', ...)
                 mae_historico = df_metrics['MAE'].iloc[0]
-                forecast_df = make_dl_prediction(model, scaler, df_hist, periods_to_forecast, mae=mae_historico)
+                forecast_df = make_dl_prediction(model, scaler, df_hist, periods_to_forecast, mae=mae_historico, model_name=model_name_key)
 
             st.markdown(f"### Resultados para **{nombre_estacion_seleccionada}** (Modelo: {model_display_name})")
 
@@ -384,25 +403,29 @@ def dl_models_page():
             y_pred = forecast_df["yhat"].values
 
             # Si hay suficiente solapamiento
-            if len(y_real) == len(y_pred) and len(y_real) >= 2:
+        df_merge = pd.merge(df_hist, forecast_df, on="fecha", how="inner")
+
+        if not df_merge.empty and len(df_merge) >= 2:
+            y_real = df_merge["tmed"]
+            y_pred = df_merge["yhat"]
+
+            try:
                 mae = mean_absolute_error(y_real, y_pred)
                 mse = mean_squared_error(y_real, y_pred)
-                try:
-                    r2 = r2_score(y_real, y_pred)
-                except ValueError:
-                    r2 = np.nan
-
-                df_metrics = pd.DataFrame([{
-                    "MAE": mae,
-                    "MSE": mse,
-                    "R²": r2
-                }])
-            else:
-                df_metrics = pd.DataFrame([{
-                    "MAE": np.nan,
-                    "MSE": np.nan,
-                    "R²": np.nan
-                }])
+                r2 = r2_score(y_real, y_pred)
+            except Exception as e:
+                st.warning(f"Error calculando métricas: {e}")
+                mae, mse, r2 = np.nan, np.nan, np.nan
+        else:
+            st.warning("⚠️ No hay suficientes datos reales para comparar con las predicciones.")
+            mae, mse, r2 = np.nan, np.nan, np.nan       
+                
+            df_metrics = pd.DataFrame([{
+                "MAE": mae,
+                "MSE": mse,
+                "R²": r2
+            }])
+       
          
         # Asegúrate de que df_hist tenga la columna 'fecha' y 'tmed' para el gráfico
         # --- Gráfico de Resultados con Plotly ---

@@ -106,12 +106,11 @@ def load_model_and_metrics_prophet(poblacion, cluster_id):
     try:
         with open(model_path, 'rb') as f:
             model = pickle.load(f)
-        st.write("Ruta absoluta buscada:", os.path.abspath(model_path))
-        st.write("¿Existe?", os.path.exists(model_path))
+        
         # Cargar métricas reales (ej. de un archivo JSON)
         # with open(metrics_path, 'r') as f:
         #     metrics = json.load(f)
-        st.success(f"Modelo Prophet para {poblacion} cargado exitosamente.")
+        st.success(f"Modelo Prophet cargado exitosamente.")
     except FileNotFoundError:
         st.warning(f"Modelo Prophet para {poblacion} no encontrado en {model_path}. Se entrenará al vuelo.")
         # Si no se encuentra el modelo pre-entrenado, se entrenará al vuelo en `make_prophet_prediction`.
@@ -174,7 +173,7 @@ def prophet_page():
         
         run_prediction = st.button(f"Generar Predicción para {nombre_estacion_seleccionada}", type="primary")
     
-    if st.button("Limpiar Cache de Datos"):
+        if st.button("Limpiar Cache de Datos"):
             st.cache_data.clear()
             st.success("Cache de datos limpiado. Por favor, vuelva a generar la predicción.")
     
