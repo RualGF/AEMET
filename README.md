@@ -45,26 +45,34 @@ PROYECTO-FINAL/
 │
 ├── data/                 # Ficheros de datos estáticos y cacheados
 │   ├── spain-provinces.geojson
+│   ├── spain-comunidad-autonoma.geojson
 │   └── ...
 │
-├── images/               # Imágenes y logos para la interfaz
+├── images/                 # Imágenes y logos para la interfaz
 │
-├── pages/                # Páginas de la aplicación Streamlit
-│   ├── 1_EDA.py
-│   ├── 2_Comparador.py
-│   ├── 3_Modelos_DL.py
-│   ├── 4_Modelo_Prophet.py
-│   ├── 5_Base_de_datos.py
-│   └── 6_Sobre_Nosotros.py
+├── pages/                  # Páginas de la aplicación Streamlit
+│   ├── 1_EDA.py            # Página de Análisis Exploratorio de Datos (EDA)
+│   ├── 2_Comparador.py     # Página de comparador anual por métrica y provincia
+│   ├── 3_Modelos_DL.py     # Página de modelos de Deep Learning
+│   ├── 4_Modelo_Prophet.py # Página de modelo Prophet
+│   ├── 5_Base_de_datos.py  # Página de visualización de la estructura de la base de datos
+│   └── 6_Sobre_Nosotros.py # Página de sobre nosotros
 │
-├── src/                  # Código fuente principal
-│   ├── conectar.py       # Lógica de conexión a la BD
-│   ├── poblar.py         # Scripts para crear y poblar tablas
-│   ├── ETL.py            # Pipeline de Extracción, Transformación y Carga
-│   ├── hacer_peticion.py # Lógica para peticiones a la API de AEMET
-│   ├── extraer_datos.py  # Funciones para consultas a la BD
-│   ├── dibujar.py        # Funciones para generar gráficos
-│   └── ...
+├── src/                   # Código fuente principal
+│   ├── actualizar_api.py  # Función para actualizar los datos de datos nuevos de AEMET 
+│   ├── borra_tablas.py    # Funciones para borrar tablas de la BD (no integrada en Streamlit)
+│   ├── conectar.py        # Lógica de conexión a la BD
+│   ├── dibujar.py         # Funciones para generar gráficos
+│   ├── ETL.py             # Pipeline de Extracción, Transformación y Carga
+│   ├── extraer_datos.py   # Funciones para consultas a la BD
+│   ├── hacer_peticion.py  # Lógica para peticiones a la API de AEMET
+│   ├── personalizacion.py # Funciones para personalizar los estilos de Streamlit
+│   └── poblar.py          # Scripts para crear y poblar tablas
+│
+├── modelos/
+│    ├── modelos_dl/ # Carpeta donde se alojan los modelos de Deep Learning
+│    └── prophet/ # Carpeta donde se alojan los modelos de Prophet
+│
 │
 ├── notebooks/            # Jupyter Notebooks para exploración y modelado (referencia)
 │
@@ -89,20 +97,20 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone https://github.com/TU_USUARIO/PROYECTO-FINAL.git
-    cd PROYECTO-FINAL
+    git clone https://github.com/Jorge-rivero-94/PROYECTO-FINAL-.git
+    cd PROYECTO-FINAL-
     ```
 
 2.  **Crear y activar un entorno virtual:**
     ```bash
     # Crear el entorno
-    python -m venv entorno
+    python -m venv .entorno
 
     # Activar en Windows
-    entorno/Scripts/activate
+    .entorno/Scripts/activate
 
     # Activar en macOS/Linux
-    source entorno/bin/activate
+    source .entorno/bin/activate
     ```
 
 3.  **Instalar las dependencias:**
@@ -164,6 +172,6 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
 
 Este proyecto fue desarrollado como parte del Data Science & IA Bootcamp 2024 por:
 
-- **Augusto Pablo Salonio Carbó**: GitHub | LinkedIn
-- **Jorge Rivero de los Ríos**: GitHub | LinkedIn
-- **Raúl Guillén Flores**: GitHub | LinkedIn
+- **Augusto Pablo Salonio Carbó**: [GitHub](https://github.com/ASalonio) | [LinkedIn](https://www.linkedin.com/in/augusto-salonio-carb%C3%B3-442621132/)
+- **Jorge Rivero de los Ríos**: [GitHub](https://github.com/Jorge-rivero-94) | [LinkedIn](https://www.linkedin.com/in/jorge-rivero-de-los-r%C3%ADos-b9188b22b/)
+- **Raúl Guillén Flores**: [GitHub](https://github.com/RualGF) | [LinkedIn](https://www.linkedin.com/in/ra%C3%BAl-guill%C3%A9n-flores-014957a0/)
