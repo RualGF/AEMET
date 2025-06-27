@@ -13,65 +13,65 @@ Este proyecto es una aplicación web interactiva, desarrollada con Streamlit, pa
 
 ## 📜 Índice
 
-- Características Principales
-- Estructura del Proyecto
-- Instalación y Configuración
+- Características principales
+- Estructura del proyecto
+- Instalación y configuración
   - Pre-requisitos
-  - Pasos de Instalación
-- Uso de la Aplicación
-- Tecnologías Utilizadas
+  - Pasos de instalación
+- Uso de la aplicación
+- Tecnologías utilizadas
 - Autores
 
 ---
 
-## ✨ Características Principales
+## ✨ Características principales
 
 - **Análisis Exploratorio de Datos (EDA)**: Visualiza datos meteorológicos agregados en mapas coropléticos interactivos, con filtros por comunidad autónoma, provincia y rango de fechas.
-- **Comparador Anual**: Compara tendencias de métricas específicas (temperatura, precipitación, etc.) entre dos años para una provincia seleccionada.
+- **Comparador anual**: Compara tendencias de métricas específicas (temperatura, precipitación, etc.) entre dos años para una provincia seleccionada.
 - **Predicciones con Deep Learning**: Utiliza modelos pre-entrenados (GRU y Redes Neuronales) para pronosticar la temperatura media en estaciones específicas.
 - **Predicciones con Prophet**: Implementa el modelo Prophet de Facebook para realizar pronósticos de series temporales.
-- **Actualización de Datos**: Funcionalidad para actualizar la base de datos con los datos más recientes de la API de AEMET.
-- **Visualización de la Base de Datos**: Muestra el Modelo Entidad-Relación (MER) y la estructura de las tablas de la base de datos.
+- **Actualización de datos**: Funcionalidad para actualizar la base de datos con los datos más recientes de la API de AEMET.
+- **Visualización de la base de datos**: Muestra el Modelo Entidad-Relación (MER) y la estructura de las tablas de la base de datos.
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura del proyecto
 
 ```
 PROYECTO-FINAL/
 │
 ├── .streamlit/
-│   └── secrets.toml      # Fichero para credenciales (BD, API keys) - NO INCLUIDO EN GIT
+│   └── secrets.toml         # Fichero para credenciales (BD, API keys) - NO INCLUIDO EN GIT
 │
-├── data/                 # Ficheros de datos estáticos y cacheados
+├── data/                    # Ficheros de datos estáticos y cacheados
 │   ├── spain-provinces.geojson
 │   ├── spain-comunidad-autonoma.geojson
 │   └── ...
 │
-├── images/                 # Imágenes y logos para la interfaz
+├── images/                  # Imágenes y logos para la interfaz
 │
-├── pages/                  # Páginas de la aplicación Streamlit
-│   ├── 1_EDA.py            # Página de Análisis Exploratorio de Datos (EDA)
-│   ├── 2_Comparador.py     # Página de comparador anual por métrica y provincia
-│   ├── 3_Modelos_DL.py     # Página de modelos de Deep Learning
-│   ├── 4_Modelo_Prophet.py # Página de modelo Prophet
-│   ├── 5_Base_de_datos.py  # Página de visualización de la estructura de la base de datos
-│   └── 6_Sobre_Nosotros.py # Página de sobre nosotros
+├── pages/                   # Páginas de la aplicación Streamlit
+│   ├── 1_EDA.py             # Página de Análisis Exploratorio de Datos (EDA)
+│   ├── 2_Comparador.py      # Página de comparador anual por métrica y provincia
+│   ├── 3_Modelos_DL.py      # Página de modelos de Deep Learning
+│   ├── 4_Modelo_Prophet.py  # Página de modelo Prophet
+│   ├── 5_Base_de_datos.py   # Página de visualización de la estructura de la base de datos
+│   └── 6_Sobre_Nosotros.py  # Página de sobre nosotros
 │
-├── src/                   # Código fuente principal
-│   ├── actualizar_api.py  # Función para actualizar los datos de datos nuevos de AEMET 
-│   ├── borra_tablas.py    # Funciones para borrar tablas de la BD (no integrada en Streamlit)
-│   ├── conectar.py        # Lógica de conexión a la BD
-│   ├── dibujar.py         # Funciones para generar gráficos
-│   ├── ETL.py             # Pipeline de Extracción, Transformación y Carga
-│   ├── extraer_datos.py   # Funciones para consultas a la BD
-│   ├── hacer_peticion.py  # Lógica para peticiones a la API de AEMET
-│   ├── personalizacion.py # Funciones para personalizar los estilos de Streamlit
-│   └── poblar.py          # Scripts para crear y poblar tablas
+├── src/                     # Código fuente principal
+│   ├── actualizar_api.py    # Función para actualizar los datos de datos nuevos de AEMET 
+│   ├── borra_tablas.py      # Funciones para borrar tablas de la BD (no integrada en Streamlit)
+│   ├── conectar.py          # Lógica de conexión a la BD
+│   ├── dibujar.py           # Funciones para generar gráficos
+│   ├── ETL.py               # Pipeline de extracción, transformación y carga
+│   ├── extraer_datos.py     # Funciones para consultas a la BD
+│   ├── hacer_peticion.py    # Lógica para peticiones a la API de AEMET
+│   ├── personalizacion.py   # Funciones para personalizar los estilos de Streamlit
+│   └── poblar.py            # Scripts para crear y poblar tablas
 │
 ├── modelos/
-│    ├── modelos_dl/ # Carpeta donde se alojan los modelos de Deep Learning
-│    └── prophet/ # Carpeta donde se alojan los modelos de Prophet
+│    ├── modelos_dl/         # Carpeta donde se alojan los modelos de Deep Learning
+│    └── prophet/            # Carpeta donde se alojan los modelos de Prophet
 │
 │
 ├── notebooks/            # Jupyter Notebooks para exploración y modelado (referencia)
@@ -83,7 +83,7 @@ PROYECTO-FINAL/
 
 ---
 
-## 🚀 Instalación y Configuración
+## 🚀 Instalación y configuración
 
 Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
 
@@ -93,7 +93,7 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
 - Un servidor de MySQL en ejecución.
 - Git.
 
-### Pasos de Instalación
+### Pasos de instalación
 
 1.  **Clonar el repositorio:**
     ```bash
@@ -144,7 +144,7 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
 
 ---
 
-## 💻 Uso de la Aplicación
+## 💻 Uso de la aplicación
 
 1.  **Ejecutar la aplicación:**
     Una vez completada la instalación y configuración, inicia la aplicación con Streamlit:
@@ -153,16 +153,16 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
     ```
 
 2.  **Navegar por la aplicación:**
-    Abre la URL que aparece en tu terminal (normalmente `http://localhost:8501`) en tu navegador. Desde la página de inicio o la barra lateral, podrás acceder a todas las funcionalidades descritas en la sección de Características Principales.
+    Abre la URL que aparece en tu terminal (normalmente `http://localhost:8501`) en tu navegador. Desde la página de inicio o la barra lateral, podrás acceder a todas las funcionalidades descritas en la sección de características principales.
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## 🛠️ Tecnologías utilizadas
 
 - **Frontend**: Streamlit
-- **Backend y Lógica**: Python, Pandas, NumPy
-- **Base de Datos**: MySQL (con SQLAlchemy y PyMySQL)
-- **Visualización de Datos**: Plotly, GeoJSON
+- **Backend y lógica**: Python, Pandas, NumPy
+- **Base de datos**: MySQL (con SQLAlchemy y PyMySQL)
+- **Visualización de datos**: Plotly, GeoJSON
 - **Machine Learning**: Scikit-learn, Keras (TensorFlow), Prophet (Facebook)
 - **Peticiones API**: Requests
 
@@ -170,7 +170,7 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
 
 ## 👥 Autores
 
-Este proyecto fue desarrollado como parte del Data Science & IA Bootcamp 2024 por:
+Este proyecto fue desarrollado como parte del Data Science & IA Bootcamp 2025 por:
 
 - **Augusto Pablo Salonio Carbó**: [GitHub](https://github.com/ASalonio) | [LinkedIn](https://www.linkedin.com/in/augusto-salonio-carb%C3%B3-442621132/)
 - **Jorge Rivero de los Ríos**: [GitHub](https://github.com/Jorge-rivero-94) | [LinkedIn](https://www.linkedin.com/in/jorge-rivero-de-los-r%C3%ADos-b9188b22b/)
