@@ -16,13 +16,11 @@ src/__pycache__/
 .DS_Store
 
 # Claves o configuración sensible
-.env
-*.env
+.entorno
+*.entorno
 
 # Ignorar todos los CSV excepto estos dos
 data/*.csv
-!data/estaciones_filtradas.csv
-!data/temperaturas_historicas_ampliadas.csv
 
 # Ignorar notebooks excepto el bueno
 notebooks/*.ipynb
