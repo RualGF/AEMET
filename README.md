@@ -53,10 +53,10 @@ PROYECTO-FINAL/
 ├── pages/                   # Páginas de la aplicación Streamlit
 │   ├── 1_EDA.py             # Página de Análisis Exploratorio de Datos (EDA)
 │   ├── 2_Comparador.py      # Página de comparador anual por métrica y provincia
-│   ├── 3_Modelos_DL.py      # Página de modelos de Deep Learning
-│   ├── 4_Modelo_Prophet.py  # Página de modelo Prophet
+│   ├── 3_Modelos_DL.py      # Página de predicción con los modelos preentrenados de Deep Learning
+│   ├── 4_Modelo_Prophet.py  # Página de predicción con los modelos preentrenados de Prophet
 │   ├── 5_Base_de_datos.py   # Página de visualización de la estructura de la base de datos
-│   └── 6_Sobre_Nosotros.py  # Página de sobre nosotros
+│   └── 6_Sobre_Nosotros.py  # Página detallando sobre nosotros
 │
 ├── src/                     # Código fuente principal
 │   ├── actualizar_api.py    # Función para actualizar los datos de datos nuevos de AEMET 
