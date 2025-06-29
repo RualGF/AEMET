@@ -153,7 +153,7 @@ def mostrar_tab_territorial(nivel_region: str) -> None:
             })
 
             # Mapa
-            titulo_grafico = f"{columna_metrica} por {nivel_region} del {rango_fechas[0].strftime('%d/%m/%Y')} al {rango_fechas[1].strftime('%d/%m/%Y')}"
+            titulo_grafico = f"{metrica_seleccionada} por {titulo_columna} del {rango_fechas[0].strftime('%d/%m/%Y')} al {rango_fechas[1].strftime('%d/%m/%Y')}"
             clave_cache_fig = f"fig_{nivel_region}"
             clave_cache_fig_parametros = f"{nivel_region}_fig_params"
 
@@ -167,7 +167,7 @@ def mostrar_tab_territorial(nivel_region: str) -> None:
                 st.session_state[clave_cache_fig] = fig
                 st.session_state[clave_cache_fig_parametros] = parametros_fig
             
-            # --- Obtener datos diarios para el gráfico de líneas ---
+
             # Necesitamos el nombre de la columna de la métrica (ej. 'tmed')
             columnas_diarias = metrica_conf["col"]
             
@@ -177,41 +177,39 @@ def mostrar_tab_territorial(nivel_region: str) -> None:
             # Llamar a la nueva función para obtener los datos diarios
             df_diario = obtener_datos_diarios_filtrados(rango_fechas, nivel_region, regiones_filtradas, columnas_diarias)
 
-            # Guardar todos los parámetros necesarios para el gráfico de líneas en un único diccionario
-            # Solo se guarda si hay elementos seleccionados en el filtro
-            if filtro: 
-                st.session_state['line_plot_params'] = {
-                    "df": df_diario,
-                    "metric_col": columnas_diarias,
-                    "display_name": metrica_seleccionada,
-                    "level": nivel_region,
-                    "name_col": etiqueta_nombre 
-                }
-            else:
-                # Si no hay filtro, limpiar los parámetros del gráfico de líneas para que no se muestre
-                st.session_state.pop("line_plot_params", None)
-
             with st.sidebar:
                 st.spinner("Cargando mapa...")
                 st.write(f"Mostrando {len(df_resumen)} registros tras filtros.")
-            st.plotly_chart(st.session_state[clave_cache_fig], use_container_width=True)
+            st.plotly_chart(st.session_state[clave_cache_fig], use_container_width = True)
 
             st.divider()
 
-    # # Sección para el gráfico de líneas de evolución (solo si hay parámetros válidos)
-    # if 'line_plot_params' in st.session_state:
-    #     # El expander se abre automáticamente si hay datos para mostrar
-    #     with st.expander("Ver evolución diaria de la métrica seleccionada", expanded = True):
-    #         params = st.session_state['line_plot_params']
-    #         with st.spinner("Generando gráfico de líneas..."):
-    #             fig_lineas = dibujar_grafico_lineas_evolucion(
-    #                 params['df'], params['metric_col'], params['display_name'],
-    #                 params['level'], params['name_col'], metricas_disponibles
-    #             )
-    #             st.plotly_chart(fig_lineas, use_container_width=True)
+            #Con los datos actuales no se ha podido graficar adecuadamente. Habría que hacer media por cada filtro que se aplicara, 
+            # pero eso es mucha carga para streamlit
+            
+            # Sección para el gráfico de líneas de evolución (solo si hay parámetros válidos)
+            # if regiones_filtradas:
+            #     df_plot = df_diario  # usar provincias o CCAA seleccionadas
+            # else:
+            #     df_plot = df_diario.groupby("fecha")[columnas_diarias].mean().reset_index()
+            #     df_plot[etiqueta_nombre] = "Media nacional"  # o autonómica
+            #     df_plot["suavizada"] = df_plot[columna_metrica].rolling(window=7, center=True).mean()
+            
+            # with st.expander(f"Ver evolución desde {rango_fechas[0].strftime('%d/%m/%Y')} hasta {rango_fechas[1].strftime('%d/%m/%Y')}", expanded = True):
+            #     if not df_diario.empty:
+            #         fig_lineas = dibujar_grafico_lineas_evolucion(
+            #             df_plot, columnas_diarias, metrica_seleccionada,
+            #             nivel_region, etiqueta_nombre, metricas_disponibles
+            #         )
+            #         st.plotly_chart(fig_lineas, use_container_width = True)
+            #         st.warning("Los datos mostrados al hacer el gráfico demuestra la dificultad para extraer datos correctamente de la AEMET.")
+            #     else:
+            #         st.warning("No hay datos para mostrar en el gráfico de evolución.")
+  
 
 def main() -> None:
-      
+    st.info("La métrica altitud, no corresponde a la media real de cada región, sino la altura media de donde están sus respectivas estaciones.", 
+            icon="ℹ️")
     pestañas  = st.tabs(["Por provincias", "Por comunidades autónomas"])
     with pestañas [0]:
         mostrar_tab_territorial("provincia")

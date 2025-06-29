@@ -71,20 +71,20 @@ def main():
                     <img src="data:image/svg+xml;base64,{icono_linkedin_base64}" alt="LinkedIn" style="height: 20px; vertical-align: middle; margin-right: 5px;">
                     <a href="{member['linkedin']}" target="_blank" rel="noopener noreferrer">Perfil de LinkedIn</a>
                     """
-                    #unsafe_allow_html=True
+                    
                 )
             
-            # Enlace de GitHub (debajo del de LinkedIn)
+            # Enlace de GitHub
             if icono_github_base64:
                 st.html(
                     f"""
                     <img src="data:image/svg+xml;base64,{icono_github_base64}" alt="GitHub" style="height: 20px; vertical-align: middle; margin-right: 5px;">
                     <a href="{member['github']}" target="_blank" rel="noopener noreferrer">Perfil de GitHub</a>
                     """,
-                    #unsafe_allow_html=True
+                    
                 )
 
-    # --- SECCIÓN ACTUALIZADA ---
+   
     st.header("Nuestro Proyecto: Análisis y Predicción de Datos Meteorológicos de AEMET")
 
     st.write(

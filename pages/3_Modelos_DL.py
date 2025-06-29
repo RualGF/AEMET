@@ -41,7 +41,7 @@ def crear_secuencias(datos: pd.DataFrame, columna_objetivo: str, ventana: int) -
     """
     Función para armar secuencias a partir de datos de series temporales
     """
-   # Extraer los datos como arrays de numpy para máxima eficiencia
+   
     datos_entrada = datos.drop(columns = columna_objetivo).values
     datos_objetivo = datos[columna_objetivo].values
 
@@ -49,7 +49,7 @@ def crear_secuencias(datos: pd.DataFrame, columna_objetivo: str, ventana: int) -
     n_caracteristicas = datos_entrada.shape[1]
 
     # Pre-generar los índices para todas las secuencias de una vez
-    # Esto evita el bucle de Python y es mucho más rápido
+    
     forma = (n_secuencias, ventana, n_caracteristicas)
     saltos = (datos_entrada.strides[0], datos_entrada.strides[0], datos_entrada.strides[1])
     X = np.lib.stride_tricks.as_strided(datos_entrada, shape = forma, strides = saltos)
@@ -150,12 +150,12 @@ def hacer_prediccion_dl(modelo, escalador, datos: pd.DataFrame, periodos: int, t
     # El índice de la columna objetivo dentro de la lista completa de características escaladas
     indice_escalador_tmed = caracteristicas_a_escalar.index(columna_objetivo)
     
-    tam_ventana = modelo.input_shape[1] # Obtiene la longitud de la secuencia de entrada del modelo
+    tam_ventana = modelo.input_shape[1] 
     
     datos_escalados = escalador.transform(datos[caracteristicas_a_escalar])
     df_escalado = pd.DataFrame(datos_escalados, columns = caracteristicas_a_escalar)
 
-    # Crear secuencias para los datos históricos según el tipo de modelo (univariado vs multivariado)
+    # Crear secuencias para los datos históricos según el tipo de modelo
     if nombre_modelo == "NN": 
         X_hist_lista = []
         for i in range(len(df_escalado) - tam_ventana):
@@ -181,7 +181,7 @@ def hacer_prediccion_dl(modelo, escalador, datos: pd.DataFrame, periodos: int, t
 
     ultima_secuencia_escalada = escalador.transform(ultima_secuencia)  
     
-    # Obtiene los índices de las columnas que el modelo necesita como entrada (ej. 7 características)
+    # Obtiene los índices de las columnas que el modelo necesita como entrada
 
     indices_entrada = [caracteristicas_a_escalar.index(f) for f in caracteristicas_para_modelo]
 
@@ -201,12 +201,7 @@ def hacer_prediccion_dl(modelo, escalador, datos: pd.DataFrame, periodos: int, t
      # Calcula los promedios mensuales
     media_estacional_caracteristicas = df_hist_copia.groupby('mes')[media_estacional_columnas].mean()
 
-   # --- DEPURACIÓN: IMPRIMIR PROMEDIOS ESTACIONALES ---
-    # print("\n--- Promedios Estacionales (avg_seasonal_features): ---")
-    # print(avg_seasonal_features)
-    # print("-----------------------------------------------------")
-
-    # Obtener la altitud del último registro histórico, ya que es constante para una estación
+    
     ultima_altitud_conocida = df_hist_copia['altitud'].iloc[-1]
 
     # Generar las fechas futuras a partir de la última fecha conocida
@@ -282,8 +277,7 @@ def hacer_prediccion_dl(modelo, escalador, datos: pd.DataFrame, periodos: int, t
     
     # --- 4. Combinar predicciones y finalizar ---
     df_predicciones = pd.concat([df_in_sample, df_out_of_sample], ignore_index=True)
-    df_predicciones['ypred_inferior'] = df_predicciones['ypred'] - mae
-    df_predicciones['ypred_superior'] = df_predicciones['ypred'] + mae
+
 
     return df_predicciones
 
@@ -300,10 +294,8 @@ def modelos_dl():
         "Seleccione una estación, un modelo y un horizonte de tiempo en la barra lateral para generar un pronóstico."
     )
     
-    st.markdown("Estaciones cargadas desde la base de datos.")
     df_estaciones = obtener_estaciones_para_prediccion()
-    #df_estaciones = pd.read_sql_table(tabla_est.name, motor)
-
+   
     if df_estaciones.empty:
         st.error("No se pudieron cargar las estaciones desde la base de datos o el archivo CSV.")
         st.stop()
@@ -348,18 +340,17 @@ def modelos_dl():
         df_hist = cargar_datos_series(indicativo_seleccionado)
         cluster_id = df_estaciones[df_estaciones['codigo_indicativo'] == indicativo_seleccionado]['cluster'].iloc[0]
 
-        # Asegúrate de que 'cluster' esté en df_estaciones. Si no, necesitarás obtenerlo de otra forma.
-        # Por ejemplo, podrías cargar un mapeo de estación a clúster.
+       
         if 'cluster' in df_estaciones.columns and not df_estaciones[df_estaciones['codigo_indicativo'] == indicativo_seleccionado]['cluster'].empty:
             cluster_id = df_estaciones[df_estaciones['codigo_indicativo'] == indicativo_seleccionado]['cluster'].iloc[0]
         else:
-            # Fallback si no se encuentra el clúster (por ejemplo, usar un clúster por defecto)
+            # Fallback si no se encuentra el clúster ( usar un clúster por defecto)
             cluster_id = 0 
             st.warning(f"No se encontró el ID de clúster para la estación {indicativo_seleccionado}. Usando clúster por defecto (0).")
         
         modelo, escalador = cargar_modelo_y_escalador(clave_modelo, cluster_id)
         
-        # Solo procede si el modelo y scaler se cargaron realmente (no son placeholders)
+        # Solo procede si el modelo y scaler se cargaron realmente
         if modelo is None or escalador is None:
             st.error("No se pudo cargar un modelo o escalador real. No se generará una predicción con datos reales.")
         else:
@@ -401,9 +392,9 @@ def modelos_dl():
         if not np.isnan(mae):
             df_predicciones['ypred_inferior'] = df_predicciones['ypred'] - mae
             df_predicciones['ypred_superior'] = df_predicciones['ypred'] + mae
-        # Asegúrate de que df_hist tenga la columna 'fecha' y 'tmed' para el gráfico
+        
         # --- Gráfico de Resultados con Plotly ---
-        # Este gráfico es más personalizable y visualmente atractivo que st.line_chart
+        
         fig = go.Figure()
         
         fig.add_trace(go.Scatter(
