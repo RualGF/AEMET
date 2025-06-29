@@ -3,7 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import pickle
+import sys
 import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -11,7 +14,6 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # pip install prophet
 try:
     from prophet import Prophet
-    # import pickle # Si vas a cargar un modelo Prophet pre-entrenado
 except ImportError:
     st.error(
         "Por favor, instala Prophet (`pip install prophet`) para que el modelo de ejemplo funcione."
@@ -22,10 +24,10 @@ from src.personalizacion import load_css
 from src.extraer_datos import obtener_estaciones_para_prediccion, obtener_datos_historicos_estacion
 
 st.set_page_config(
-    page_title="Modelo Prophet",
-    page_icon="🔮",  # Icono para Prophet
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title = "Modelo Prophet",
+    page_icon = "🔮",  # Icono para Prophet
+    layout = "wide",
+    initial_sidebar_state = "expanded"
 )
 load_css("src/estilos.css")
 
@@ -65,7 +67,7 @@ def load_time_series_data(indicativo_estacion: str):
     # df = pd.DataFrame({"ds": dates, "y": values})
     st.write(f"Cargando datos históricos para la estación {indicativo_estacion}...")
     # Aquí se llama a la función real que extrae de la base de datos
-    df = obtener_datos_historicos_estacion(indicativo_estacion, target_col='tmed') # Asumimos 'tmed' como objetivo
+    df = obtener_datos_historicos_estacion(indicativo_estacion, target_col = 'tmed') # Asumimos 'tmed' como objetivo
     
     if df.empty:
         st.warning(f"No se encontraron datos históricos para la estación {indicativo_estacion}. Usando datos de ejemplo.")
