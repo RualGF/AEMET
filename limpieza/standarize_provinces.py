@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 
 def standardize_provinces(df, mapping_path="data/mapa_provincia.json"):
     """
