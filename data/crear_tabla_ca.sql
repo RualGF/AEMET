@@ -1,7 +1,8 @@
-CREATE TABLE IF NOT EXISTS comunidades (
-    codigo_ca TINYINT UNSIGNED PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL  
-);
+CREATE TABLE `comunidades` (
+  `codigo_ca` tinyint unsigned NOT NULL,
+  `nombre_ccaa` varchar(50) COLLATE utf8mb4_es_0900_ai_ci NOT NULL,
+  PRIMARY KEY (`codigo_ca`)
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_es_0900_ai_ci
 
 INSERT INTO comunidades(codigo_ca, nombre) VALUES
 ('01', 'Andalucía'),

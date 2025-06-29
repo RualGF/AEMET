@@ -1,12 +1,17 @@
 import streamlit as st
 from PIL import Image
+
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.personalizacion import load_css, get_base64_image
 
 st.set_page_config(
-    page_title="Sobre Nosotros",
-    page_icon="👥",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    page_title = "Sobre Nosotros",
+    page_icon = "👥",
+    layout = "wide",
+    initial_sidebar_state = "collapsed"
 )
 
 with st.sidebar:
@@ -18,16 +23,16 @@ with st.sidebar:
 
 def main():
     load_css('src/estilos.css')
-    st.title("Sobre Nosotros")
+    st.title("Sobre nosotros")
 
     st.write(
         """
-        Somos un equipo apasionado de estudiantes del bootcamp Data Science & IA Bootcamp 2024. Este es el resultado 
+        Somos un equipo apasionado de estudiantes del bootcamp Data Science & IA Bootcamp 2025. Este es el resultado 
         de nuestro esfuerzo y dedicación en el desarrollo de este proyecto final.".
         """
     )
 
-    st.header("Nuestro Equipo")
+    st.header("Nuestro equipo")
 
     # Información de cada miembro del equipo
     team_members = [
@@ -54,7 +59,7 @@ def main():
         with cols[i]:
             try:
                 image = Image.open(member["image"])
-                st.image(image, use_container_width=True)
+                st.image(image, use_container_width = True)
             except FileNotFoundError:
                 st.error(f"Imagen no encontrada para {member['nombre']}")
             st.subheader(member["nombre"])
