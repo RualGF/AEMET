@@ -50,6 +50,8 @@ PROYECTO-FINAL/
 │
 ├── images/                  # Imágenes y logos para la interfaz
 │
+├── limpieza                 # Archivos necesarios para la limpieza de los datos (ETL)
+│
 ├── pages/                   # Páginas de la aplicación Streamlit
 │   ├── 1_EDA.py             # Página de Análisis Exploratorio de Datos (EDA)
 │   ├── 2_Comparador.py      # Página de comparador anual por métrica y provincia
@@ -142,8 +144,8 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
     ```
     Este comando creará todas las tablas necesarias y las llenará con los datos iniciales del proyecto. Este proceso puede tardar varios minutos.
 
-*Dump de la base de datos:*
-[text](https://1drv.ms/u/c/57827eb0ea7b7cfc/EWHOvdQosdJKvGrKstfwovkB1Pl_vqj2P9eIAU393Pwtug?e=XsPK6n)
+
+[Dump de la base de datos](https://1drv.ms/u/c/57827eb0ea7b7cfc/EWHOvdQosdJKvGrKstfwovkB1Pl_vqj2P9eIAU393Pwtug?e=XsPK6n)
 ---
 
 ## 💻 Uso de la aplicación
