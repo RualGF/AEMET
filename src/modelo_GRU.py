@@ -4,6 +4,9 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import os
 import joblib
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
