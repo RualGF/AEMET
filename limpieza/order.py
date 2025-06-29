@@ -1,5 +1,4 @@
 import logging
-import pandas as pd
 
 def order(df):
     """
