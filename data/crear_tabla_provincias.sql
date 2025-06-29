@@ -1,9 +1,11 @@
-CREATE TABLE IF NOT EXISTS provincias (
-    codigo_prov TINYINT UNSIGNED PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL,
-    codigo_ca TINYINT UNSIGNED NOT NULL,
-    FOREIGN KEY (codigo_ca) REFERENCES comunidades(codigo_ca)
-);
+CREATE TABLE `provincias` (
+  `codigo_prov` tinyint unsigned NOT NULL,
+  `nombre_prov` varchar(50) COLLATE utf8mb4_es_0900_ai_ci NOT NULL,
+  `codigo_ca` tinyint unsigned NOT NULL,
+  PRIMARY KEY (`codigo_prov`),
+  KEY `codigo_ca` (`codigo_ca`),
+  CONSTRAINT `provincias_ibfk_1` FOREIGN KEY (`codigo_ca`) REFERENCES `comunidades` (`codigo_ca`)
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_es_0900_ai_ci
 
 INSERT INTO provincias (codigo_prov, nombre, codigo_ca) VALUES
 ('01', 'Araba/Álava', '17'),
