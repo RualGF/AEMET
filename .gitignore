@@ -19,11 +19,13 @@ src/__pycache__/
 .entorno
 *.entorno
 
-# Ignorar todos los CSV excepto estos dos
+# Archivos de datos generados
 data/*.csv
+data/*.pkl
 
-# Ignorar notebooks excepto el bueno
-notebooks/*.ipynb
+# Notebooks de Jupyter
+notebooks/
+*.ipynb
 !notebooks/Extracción y limpieza.ipynb
 
 # Carpeta innecesaria
