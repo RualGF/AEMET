@@ -1,10 +1,16 @@
 import streamlit as st
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 from src.personalizacion import load_css
 
 
-st.set_page_config(page_title="Base de Datos", page_icon="🗄️", 
-                   layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title = "Base de Datos", 
+                   page_icon = "🗄️", 
+                   layout = "wide", 
+                   initial_sidebar_state = "collapsed")
 
 def main():
     load_css('src/estilos.css')

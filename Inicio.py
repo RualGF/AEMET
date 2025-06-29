@@ -1,4 +1,8 @@
 import streamlit as st
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 from src.personalizacion import load_css
 
@@ -10,10 +14,10 @@ from src.actualizar_api import descargar_nuevos_datos_aemet
 
 
 st.set_page_config(
-    page_title="Proyecto Grupo D",
-    page_icon="🌡️",
-    layout="wide",
-    initial_sidebar_state="collapsed",
+    page_title = "Proyecto Grupo D",
+    page_icon = "🌡️",
+    layout = "wide",
+    initial_sidebar_state = "collapsed",
 )
 
 with st.sidebar:
@@ -70,12 +74,12 @@ def main():
     # --- Plantilla de Navegación ---
     # Organiza las páginas de tu aplicación en tarjetas.
     # Simplemente completa o modifica las siguientes secciones.
-    col1, col2, col3 = st.columns(3, gap="large")
+    col1, col2, col3 = st.columns(3, gap = "large")
     with col1:
-        with st.container(border=True):
+        with st.container(border = True):
             st.markdown("##### 📈 Análisis Exploratorio (EDA)")
             st.markdown("Filtra y visualiza datos meteorológicos por comunidad, provincia y fechas para un análisis personalizado.")
-            if st.button("Ir a análisis", key="eda", use_container_width=True):
+            if st.button("Ir a análisis", key = "eda", use_container_width = True):
                 st.switch_page("pages/1_EDA.py")
         # st.markdown("""
         # **Datos Históricos de la AEMET**  
@@ -88,7 +92,7 @@ def main():
         #     st.switch_page("pages/1_Datos_historicos.py")
 
     with col2:
-        with st.container(border=True):
+        with st.container(border = True):
             st.markdown("##### 📊 Comparador de métricas por provincia  y cada 2 años")
             st.markdown("Filtra y visualiza métricas de dos años de una provincia seleccionada.")
             if st.button("Ir a comparador", key="comparador", use_container_width=True):
@@ -100,7 +104,7 @@ def main():
         # if st.button("Ir a Datos Filtrados", key="filtrados", use_container_width=True):
         #     st.switch_page("pages/1_EDA.py")
     with col3:
-        with st.container(border=True):
+        with st.container(border = True):
             st.markdown("##### 🗄️ Base de datos")
             st.markdown("Estructura y esquema de la base de datos")
             if st.button("Ir a base de datos", key="bd", use_container_width=True):
@@ -108,21 +112,21 @@ def main():
     
 
     st.divider()
-    col4, col5, col6 = st.columns(3, gap="large")
+    col4, col5, col6 = st.columns(3, gap = "large")
     with col4:
-         with st.container(border=True):
+         with st.container(border = True):
             st.markdown("##### 🤖 Modelos GRU y NN")
             st.markdown("Modelos precargados de deep learning para predicciones")
             if st.button("Ir a modelos", key="modelos", use_container_width=True):
                 st.switch_page("pages/3_Modelos_DL.py")
     with col5:
-        with st.container(border=True):
+        with st.container(border = True):
             st.markdown("##### 🔮 Modelos Prophet")
             st.markdown("Modelos precargados de prophet para predicciones")
             if st.button("Ir a propeth", key="prophet", use_container_width=True):
                 st.switch_page("pages/4_Modelo_Prophet.py")
     with col6:
-        with st.container(border=True):
+        with st.container(border = True):
             st.markdown("##### 👥 Sobre nosotros")
             st.markdown("Información sobre los desarrolladores del proyecto")
             if st.button("Ir a sobre nosotros", key="nosotros", use_container_width=True):
