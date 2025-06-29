@@ -1,4 +1,4 @@
-import json
+import logging
 
 def standardize_provinces(df, mapping_path="data/mapa_provincia.json"):
     """
