@@ -20,4 +20,4 @@ def borrar_por_lotes(nombre_tabla: str, tam_lote: int = 10000):
         print(f"✅ Total filas borradas de '{nombre_tabla}': {total_borradas}")
 
 if __name__ == "__main__":
-    borrar_por_lotes("datos_meteorologicos", tam_lote=10000)
+    borrar_por_lotes("datos_meteorologicos", tam_lote = 10000)

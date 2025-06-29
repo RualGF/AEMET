@@ -6,17 +6,16 @@ import json
 import streamlit as st
 
 
-@st.cache_data(hash_funcs={dict: lambda _: None})
-def cargar_geojson_con_canarias_reubicadas(ruta_geojson):
-    with open(ruta_geojson, 'r', encoding='utf-8') as f:
+@st.cache_data(ttl = 60) 
+def cargar_geojson_con_canarias_reubicadas(ruta_geojson: str) -> dict:
+    with open(ruta_geojson, 'r', encoding = 'utf-8') as f:
         geojson = json.load(f)
-    #print("Nombres cargados del geojson:", [f["properties"].get("name") for f in geojson["features"]])
     
     codigos_provincias_canarias = {"35", "38"}  # Las dos provincias insulares
     codigos_ccaa_canarias = {"04"}  # Código de la CCAA Canarias en el GeoJSON de CCAA
 
 
-    def desplazar_coords(coords):
+    def desplazar_coords(coords: list) -> list:
         return [
             [[x + 5, y + 7] for x, y in ring if isinstance(ring, list)]
             for ring in coords if isinstance(ring, list)
@@ -61,7 +60,7 @@ def cargar_geojson_con_canarias_reubicadas(ruta_geojson):
 
     return geojson
  
-def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provincias'):
+def dibujar_coropletico_plotly(datos: pd.DataFrame, nombre_columna: str, texto_titulo: str, nivel: str = 'provincias') -> go.Figure:
     """
     Visualización coroplética interactiva con Plotly.
 
@@ -83,10 +82,7 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
 
     geojson_provincias = cargar_geojson_con_canarias_reubicadas('data/spain-provinces.geojson')
     geojson_ccaa = cargar_geojson_con_canarias_reubicadas('data/spain-comunidad-autonoma.geojson')
-    #geojson_ccaa = pd.read_json('data/spain-comunidad-autonoma.geojson')
 
-
-    # Asegurarse de que los códigos sean string con ceros a la izquierda
     if nivel == 'ccaa':
         geojson_data = geojson_ccaa
         geojson_key = 'properties.cod_ccaa'
@@ -100,8 +96,8 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
         
         datos['cod_ccaa'] = datos['cod_ccaa'].astype(str).str.zfill(2)
         
-        datos = base.merge(datos, on=['cod_ccaa', 'nombre_ccaa'], how='left')
-        datos = datos.rename(columns={"nombre_ccaa": "nombre"})
+        datos = base.merge(datos, on = ['cod_ccaa', 'nombre_ccaa'], how = 'left')
+        datos = datos.rename(columns = {"nombre_ccaa": "nombre"})
         
     else:
         geojson_data = geojson_provincias
@@ -115,8 +111,8 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
         
         datos['codigo_prov'] = datos['codigo_prov'].astype(str).str.zfill(2)
         
-        datos = base.merge(datos, on=['codigo_prov', 'nombre_prov'], how='left')
-        datos = datos.rename(columns={"nombre_prov": "nombre"})
+        datos = base.merge(datos, on = ['codigo_prov', 'nombre_prov'], how = 'left')
+        datos = datos.rename(columns = {"nombre_prov": "nombre"})
     
     # Añadir columna auxiliar para gestionar NaN con color gris
     datos['_valor_plot'] = datos[nombre_columna].copy().fillna(-9999)
@@ -132,42 +128,40 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
         vmin = vmin * 0.9 if vmin != 0 else -1
         vmax = vmax * 1.1 if vmax != 0 else 1
 
-    # Ahora puedes usar 'nombre' en cualquier parte
     custom_cols = ['nombre', '_hover_valor']
 
-     # Crear el mapa coroplético con hover customizado
     fig = px.choropleth(
         datos,
-        geojson=geojson_data,
-        locations=location_col,
-        featureidkey=geojson_key,
-        color='_valor_plot',
-        color_continuous_scale=variables_config.get(nombre_columna, {}).get('color', 'RdBu_r'),
-        range_color=(vmin, vmax),
-        custom_data=custom_cols,
-        title=texto_titulo
+        geojson = geojson_data,
+        locations = location_col,
+        featureidkey = geojson_key,
+        color = '_valor_plot',
+        color_continuous_scale = variables_config.get(nombre_columna, {}).get('color', 'RdBu_r'),
+        range_color = (vmin, vmax),
+        custom_data = custom_cols,
+        title = texto_titulo
     )
 
     cfg = variables_config.get(nombre_columna, {})
     nombre_amigable = cfg.get('label', nombre_columna)
     string_para_hover_template = f"<b>%{{customdata[0]}}</b><br>{nombre_amigable}: %{{customdata[1]}}<extra></extra>"
-    fig.update_traces(hovertemplate=string_para_hover_template)
+    fig.update_traces(hovertemplate = string_para_hover_template)
 
     # Añadir capa para provincias sin datos (gris)
     for i, row in datos.iterrows():
         if row['_valor_plot'] == -9999:
             fig.add_trace(go.Choropleth(
-                geojson=geojson_data,
-                locations=[row[location_col]],
-                z=[0],
-                colorscale=[[0, 'lightgrey'], [1, 'lightgrey']],
-                showscale=False,
-                featureidkey=geojson_key,
-                hoverinfo='skip'
+                geojson = geojson_data,
+                locations = [row[location_col]],
+                z = [0],
+                colorscale = [[0, 'lightgrey'], [1, 'lightgrey']],
+                showscale = False,
+                featureidkey = geojson_key,
+                hoverinfo = 'skip'
             ))
 
     # Ajustes del mapa para asegurar buen tamaño
-    fig.update_geos(fitbounds="geojson", visible=False)
+    fig.update_geos(fitbounds = "geojson", visible = False)
 
     # Anotaciones para máximos y mínimos (si hay datos)
     if datos[nombre_columna].notna().any():
@@ -183,31 +177,36 @@ def dibujar_coropletico_plotly(datos, nombre_columna, texto_titulo, nivel='provi
         resumen_extremos = f"📈 Máx: {entidad_max} ({valor_max:.1f} {unidad})    📉 Mín: {entidad_min} ({valor_min:.1f} {unidad})"
         
         fig.update_layout(
-            title=dict(
-                text=f"{texto_titulo}<br><sub>{resumen_extremos}</sub>",
-                x=0.5, xanchor='center'
+            title = dict(
+                text = f"{texto_titulo}<br><sub>{resumen_extremos}</sub>",
+                x = 0.5, xanchor = 'center'
             ),
-        coloraxis_colorbar=dict(
-            title=f"{cfg.get('label', nombre_columna)} ({cfg.get('unidad', '')})",
-            tickvals=np.linspace(vmin, vmax, 7).round(1)
+        coloraxis_colorbar = dict(
+            title = f"{cfg.get('label', nombre_columna)} ({cfg.get('unidad', '')})",
+            tickvals = np.linspace(vmin, vmax, 7).round(1)
         ),
-        margin={"r":0,"t":80,"l":0,"b":0},
-        height=700
+        margin = {"r":0,"t":80,"l":0,"b":0},
+        height = 700
     )
 
     return fig
 
-def dibujar_grafico_lineas_evolucion(df_original, metrica_col, titulo_metrica, nivel, nombre_col, metricas_disponibles):
+def dibujar_grafico_lineas_evolucion(df_original: pd.DataFrame, metrica_col: str, titulo_metrica: str, nivel: str, nombre_col: str, metricas_disponibles: dict) -> go.Figure:
     """
     Dibuja un gráfico de líneas mostrando la evolución diaria de una métrica.
+    df_original -> recibe un df de provincias o comunidades
+    metrica_col -> la métrica seleccionada
+    titulo_metrica -> El título completo de la métrica
+    nivel -> 'provincia' o 'ccaa'
+    nombre_col -> 'nombre_prov' o 'nombre_ccaa'
+    metricas disponibles -> todas las métricas posibles
     """
-    # Asegurarse de que 'fecha' sea datetime para el eje X y ordenar para el gráfico de líneas
     
     df_original["fecha"] = pd.to_datetime(df_original["fecha"])
-    df_original = df_original.sort_values(by=["fecha", nombre_col])
+    df_original = df_original.sort_values(by = ["fecha", nombre_col])
 
     # Obtener la unidad de la métrica para el títulopara el hover
-    unidad_metrica = metricas_disponibles.get(titulo_metrica, {}).get('unidad', '')
+    unidad_metrica = metricas_disponibles.get(titulo_metrica, {}).get("unidad", "")
 
     fig = go.Figure()
     
@@ -215,24 +214,22 @@ def dibujar_grafico_lineas_evolucion(df_original, metrica_col, titulo_metrica, n
     for nombre_entidad in df_original[nombre_col].unique():
         df_entidad = df_original[df_original[nombre_col] == nombre_entidad]
         fig.add_trace(go.Scatter(
-            x=df_entidad["fecha"],
-            y=df_entidad[metrica_col],
-            mode='lines',
-            name=nombre_entidad, # Nombre de la entidad para la leyenda
-            hovertemplate=f"<b>{nombre_entidad}</b><br>" +
-                          "<b>Fecha</b>: %{{x|%d/%m/%Y}}<br>" +
-                          f"<b>{titulo_metrica}</b>: %{{y:.2f}} {unidad_metrica}<extra></extra>"
+            x = df_entidad["fecha"],
+            y = df_entidad[metrica_col],
+            mode = 'lines',
+            name = nombre_entidad, 
+            hovertemplate = f"<b>{nombre_entidad}</b><br>" +
+                            "<b>Fecha</b>: %{{x|%d/%m/%Y}}<br>" +
+                            f"<b>{titulo_metrica}</b>: %{{y:.2f}} {unidad_metrica}<extra></extra>"
         ))
 
-    # Actualizar el layout
     fig.update_layout(
-        title=f"Evolución diaria de {titulo_metrica} por {'provincias' if nivel == 'provincia' else 'comunidades autónomas'}", # Título más robusto
-        xaxis_title="Fecha",
-        yaxis_title=f"{titulo_metrica} ({unidad_metrica})", # Título del eje Y con unidad
-        hovermode="x unified", # Hover unificado para ver todos los datos en una fecha
-        legend_title_text=f"{nivel.capitalize()}", # Título de la leyenda
-        height=500 # Altura fija para un solo plot
+        title = f"Evolución diaria de {titulo_metrica} por {'provincias' if nivel == 'provincia' else 'comunidades autónomas'}", 
+        xaxis_title = "Fecha",
+        yaxis_title = f"{titulo_metrica} ({unidad_metrica})",
+        hovermode = "x unified", 
+        legend_title_text = f"{nivel.capitalize()}",
+        height = 500 
     )
 
     return fig
-
