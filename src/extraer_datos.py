@@ -116,14 +116,16 @@ def generar_df_cache(clave_df: str, clave_parametros: str, stmt_conf: dict, **pa
     with st.sidebar:
         if (clave_df not in st.session_state) or (st.session_state.get(clave_parametros) != parametros):
             consulta = construir_consulta_general(stmt_conf)
-            st.write(f"Ejecutando consulta SQL para '{clave_df}' con parámetros:", parametros)
+            with st.expander(f"Ejecutando consulta SQL para '{clave_df}' con parámetros:"):
+                st.write(parametros)
+            #st.write(f"Ejecutando consulta SQL para '{clave_df}' con parámetros:", parametros)
             
             df = ejecutar_consulta_a_dataframe(consulta, **parametros)
             st.session_state[clave_df] = df
             st.session_state[clave_parametros] = parametros
         else:
-            st.write(f"Usando cache para '{clave_df}'")
-
+            #st.write(f"Usando cache para '{clave_df}'")
+            st.expander(f"Usando cache para '{clave_df}'")
         return st.session_state[clave_df]
 
 

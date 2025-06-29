@@ -7,22 +7,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import (
     MetaData, Table, Column, String, Date, TIMESTAMP, Float, 
-    ForeignKey, Connection, create_engine
+    ForeignKey, Connection
 )
-from sqlalchemy.dialects.mysql import TINYINT
+from sqlalchemy.dialects.mysql import TINYINT, insert
 from sqlalchemy.exc import IntegrityError, OperationalError
 
-#from conectar import conexion_a_bd
-from src.ETL import run_etl
+from conectar import conexion_a_bd
 
-
-#motor = conexion_a_bd()
-user = "root"
-pw = "s41nt"
-bd = "aemet"
-host = "localhost"
-port = 3306
-motor = create_engine(f"mysql+pymysql://{user}:{pw}@{host}:{port}/{bd}") 
+motor = conexion_a_bd()
 
 # --- Definición de Tablas y Metadatos ---
 meta = MetaData()
@@ -88,7 +80,7 @@ def poblar_comunidades(conector: Connection):
     ]
     print("Insertando comunidades autónomas...")
     try:
-        # Usamos prefix_with("IGNORE") para que MySQL ignore los duplicados y no lance error
+       
         conector.execute(tabla_ccaa.insert().prefix_with("IGNORE"), registros)
         print("✅ Comunidades insertadas correctamente.")
     except Exception as e:
@@ -211,35 +203,49 @@ def poblar_datos_meteorologicos(conector: Connection, df_dm: pd.DataFrame):
     # Seleccionar y ordenar columnas según la tabla de la BD para evitar errores
     columnas_tabla_dm = [c.name for c in tabla_dm.columns]
     df_para_insertar = df_dm_merged[[col for col in columnas_tabla_dm if col in df_dm_merged.columns]]
-    # Si viene algún archivo NaN se renombra a None de Python, que es el
-    # equivalente a NULL en SQL y es compatible con el driver de la base de datos.
+
     df_para_insertar = df_para_insertar.astype(object).where(pd.notnull(df_para_insertar), None)
 
     # Convertir a lista de diccionarios
-    registros = df_para_insertar.to_dict(orient='records')
+    registros = df_para_insertar.to_dict(orient = 'records')
 
     # Usar la función de inserción por lotes
     insertar_por_lotes(tabla_dm, registros, conector, tamaño_lote = 10000)
 
-def insertar_por_lotes(tabla: Table, datos: list, conn: Connection, tamaño_lote: int = 100, verbose: bool = True):
+def insertar_por_lotes(tabla: Table, datos: list, conn: Connection = motor.connect(), tamaño_lote: int = 100, verbose: bool = True):
     """
-    Inserta registros en una tabla SQLAlchemy por lotes.
-    Usa INSERT IGNORE para evitar fallos por duplicados (específico de MySQL).
+    Inserta o actualiza registros en una tabla SQLAlchemy por lotes.
+    Usa 'INSERT ... ON DUPLICATE KEY UPDATE' para un 'upsert' eficiente en MySQL.
 
     Args:
-        tabla (Table): Objeto SQLAlchemy de la tabla destino.
-        datos (list[dict]): Lista de registros (dicts) a insertar.
-        conn (Connection): Conexión activa de SQLAlchemy.
-        tamaño_lote (int): Número de registros por lote.
-        verbose (bool): Si True, imprime el progreso.
+        tabla: Objeto SQLAlchemy de la tabla destino.
+        datos: Lista de registros (dicts) a insertar/actualizar.
+        conn: Conexión activa de SQLAlchemy.
+        tamaño_lote: Número de registros por lote.
+        verbose: Si True, imprime el progreso.
     """
     total = len(datos)
     if total == 0:
         if verbose:
             print(f"ℹ️ No hay datos para insertar en '{tabla.name}'.")
         return
+    
+    # Construye la sentencia de 'INSERT ... ON DUPLICATE KEY UPDATE'
+    insertar_stmt = insert(tabla)
+
+    # Define qué columnas se deben actualizar si la clave ya existe.
+    # Se actualizan todas las columnas excepto las que forman parte de la clave primaria.
+    columnas_a_actualizar = {
+        c.name: insertar_stmt.inserted[c.name]
+        for c in tabla.columns if not c.primary_key
+    }
+    
+    upsert_stmt = insertar_stmt.on_duplicate_key_update(columnas_a_actualizar)
+
     if verbose:
         print(f"🚀 Iniciando inserción de {total} registros en '{tabla.name}' (lotes de {tamaño_lote})...")
+        print(f"🚀 Iniciando inserción/actualización de {total} registros en '{tabla.name}' (lotes de {tamaño_lote})...")
+    
     
     try:
         for i in range(0, total, tamaño_lote):
@@ -247,9 +253,9 @@ def insertar_por_lotes(tabla: Table, datos: list, conn: Connection, tamaño_lote
             
             if verbose:
                 print(f"📦 Insertando lote en '{tabla.name}': registros {i+1} a {min(i + tamaño_lote, total)} de {total}")
-            conn.execute(tabla.insert().prefix_with("IGNORE"), lote)
+            conn.execute(upsert_stmt, lote)
         if verbose:
-            print(f"✅ Inserción por lotes finalizada para '{tabla.name}': {total} registros procesados.")
+            print(f"✅ Inserción/actualización por lotes finalizada para '{tabla.name}': {total} registros procesados.")
 
     except OperationalError as e:
                 print(f"❌ Error durante la inserción por lotes en '{tabla.name}': {e}")
@@ -259,13 +265,14 @@ def main(ruta_pkl: str, tabla_a_poblar: str, ruta_csv_estaciones: str):
     Función principal que orquesta la creación y población de las tablas.
 
     """
-    #motor = conexion_a_bd()
+    motor = conexion_a_bd()
     
     # Crear todas las tablas si no existen
     print("Creando tablas si no existen...")
     meta.create_all(motor)
     print("✅ Verificación de tablas completada.")
 
+    # Lo siguiente se utiliza para parametrizar poblar.py por línea de comandos
     with motor.begin() as conector:
         if tabla_a_poblar in ["comunidades", "todas"]:
             poblar_comunidades(conector)
@@ -285,12 +292,7 @@ def main(ruta_pkl: str, tabla_a_poblar: str, ruta_csv_estaciones: str):
             poblar_estaciones(conector, df_est_preparado)
 
         if tabla_a_poblar in ["datos_meteorologicos", "todas"]:
-            # if ruta_pkl:
-            #     print(f"Cargando datos desde '{ruta_pkl}'...")
-            #     df_completo = pd.read_pickle(ruta_pkl)
-            # else:
-            df_completo = run_etl(modo = "masivo")
-            #df_completo = pd.read_pickle(ruta_pkl)
+            df_completo = pd.read_pickle(ruta_pkl)
             df_dm = df_completo.rename(columns = {"indicativo": "codigo_indicativo"})
             poblar_datos_meteorologicos(conector, df_dm)
 

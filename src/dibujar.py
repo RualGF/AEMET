@@ -209,22 +209,44 @@ def dibujar_grafico_lineas_evolucion(df_original: pd.DataFrame, metrica_col: str
     unidad_metrica = metricas_disponibles.get(titulo_metrica, {}).get("unidad", "")
 
     fig = go.Figure()
-    
+    num_regiones = df_original[nombre_col].nunique()
+
+    if num_regiones == 1:
+        # Solo una región: línea gruesa, color fijo
+        paleta = ["#1f77b4"]    
+    elif num_regiones <= 6:
+        # Pocas regiones: colores distintos, línea media
+        paleta = px.colors.qualitative.Set2
+    elif num_regiones <= 12:
+        # Varias: colores más suaves, línea fina
+        paleta = px.colors.qualitative.Pastel
+    else:
+        # Muchas regiones: usar gris claro o mismo color
+        paleta = ["#BBBBBB"] * num_regiones
+
     # Iterar sobre cada entidad única y añadir una traza
-    for nombre_entidad in df_original[nombre_col].unique():
+    for i, nombre_entidad in enumerate(df_original[nombre_col].unique()):
         df_entidad = df_original[df_original[nombre_col] == nombre_entidad]
+        df_entidad = df_entidad.sort_values(by = "fecha")
+        df_entidad[metrica_col] = df_entidad[metrica_col].interpolate()
+        df_entidad = df_entidad.reset_index()
+        
+        color = paleta[i % len(paleta)]
+        
         fig.add_trace(go.Scatter(
             x = df_entidad["fecha"],
-            y = df_entidad[metrica_col],
-            mode = 'lines',
-            name = nombre_entidad, 
-            hovertemplate = f"<b>{nombre_entidad}</b><br>" +
-                            "<b>Fecha</b>: %{{x|%d/%m/%Y}}<br>" +
-                            f"<b>{titulo_metrica}</b>: %{{y:.2f}} {unidad_metrica}<extra></extra>"
+            y = df_entidad[metrica_col],            
+            mode = 'markers',
+        line = dict(color = color, width = 1.5 if num_regiones <= 6 else 1),            
+        name = nombre_entidad,
+        connectgaps = False, 
+        hovertemplate = f"<b>{nombre_entidad}</b><br>" +
+                            f"<b>Fecha</b>: %{{x|%d/%m/%Y}}<br>" +
+                            f"<b>{titulo_metrica}</b>: %{{y:.2f}}<extra></extra>"
         ))
 
     fig.update_layout(
-        title = f"Evolución diaria de {titulo_metrica} por {'provincias' if nivel == 'provincia' else 'comunidades autónomas'}", 
+        title = f"Evolución de {titulo_metrica} por {'provincias' if nivel == 'provincia' else 'comunidades autónomas'}", 
         xaxis_title = "Fecha",
         yaxis_title = f"{titulo_metrica} ({unidad_metrica})",
         hovermode = "x unified", 

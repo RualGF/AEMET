@@ -67,13 +67,9 @@ def main():
     
     """)
 
-    #st.subheader("Secciones Disponibles")
+  
     st.subheader("Navegación Principal")
-    #col1, col2 = st.columns(2)
     
-    # --- Plantilla de Navegación ---
-    # Organiza las páginas de tu aplicación en tarjetas.
-    # Simplemente completa o modifica las siguientes secciones.
     col1, col2, col3 = st.columns(3, gap = "large")
     with col1:
         with st.container(border = True):
@@ -81,28 +77,14 @@ def main():
             st.markdown("Filtra y visualiza datos meteorológicos por comunidad, provincia y fechas para un análisis personalizado.")
             if st.button("Ir a análisis", key = "eda", use_container_width = True):
                 st.switch_page("pages/1_EDA.py")
-        # st.markdown("""
-        # **Datos Históricos de la AEMET**  
-        # Visualiza estadísticas promedio de variables meteorológicas (temperatura, precipitación, humedad, etc.) 
-        # por provincia en España.  
-        # """)
-        # if st.button(
-        #     "Ir a Datos Históricos", key="historicos", use_container_width=True
-        # ):
-        #     st.switch_page("pages/1_Datos_historicos.py")
-
+      
     with col2:
         with st.container(border = True):
             st.markdown("##### 📊 Comparador de métricas por provincia  y cada 2 años")
             st.markdown("Filtra y visualiza métricas de dos años de una provincia seleccionada.")
             if st.button("Ir a comparador", key="comparador", use_container_width=True):
                 st.switch_page("pages/2_Comparador.py")
-        # st.markdown("""
-        # **Datos Meteorológicos Filtrados**  
-        # Filtra datos meteorológicos por comunidad autónoma, provincia y rango de fechas para un análisis personalizado.  
-        # """)
-        # if st.button("Ir a Datos Filtrados", key="filtrados", use_container_width=True):
-        #     st.switch_page("pages/1_EDA.py")
+  
     with col3:
         with st.container(border = True):
             st.markdown("##### 🗄️ Base de datos")

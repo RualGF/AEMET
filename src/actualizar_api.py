@@ -4,8 +4,17 @@ from datetime import datetime
 from sqlalchemy import func
 
 from src.conectar import conexion_a_bd
-from src.poblar import tabla_dm
+from src.poblar import tabla_dm, poblar_datos_meteorologicos
+from src.ETL import run_etl
 
+
+motor = conexion_a_bd()
+
+df = run_etl()
+poblar_datos_meteorologicos(motor.connect(), df)
+
+
+# Pensábamos hacerlo por timestamp, pero decidimos hacer los últimos 3 días, por la falta de cohesión en la periodicidad de la Aemet
 def obtener_ultimo_timestamp() -> datetime | None:
     """
     Consulta la tabla 'datos_meteorologicos' para encontrar el último
@@ -31,15 +40,10 @@ def descargar_nuevos_datos_aemet() -> pd.DataFrame:
     """
     Función principal para descargar datos nuevos.
     Orquesta la obtención de la fecha de inicio y la llamada a la API.
-
-    NOTA: Esta es una simulación. Deberás adaptarla con tu lógica real
-    de llamada a la API de AEMET.
     """
     ultimo_timestamp = obtener_ultimo_timestamp()
 
-    # Si no hay timestamp, significa que es la primera carga.
-    # Aquí se debería ejecutar la carga masiva desde el PKL, no la API.
-    # Por ahora, asumimos que la carga inicial ya se hizo.
+
     if ultimo_timestamp is None:
         print(
             "La base de datos parece estar vacía. Ejecuta primero el script 'popular.py' para la carga inicial."
@@ -48,19 +52,8 @@ def descargar_nuevos_datos_aemet() -> pd.DataFrame:
 
     print(f"Iniciando descarga de datos posteriores a {ultimo_timestamp}.")
 
-    # --- SIMULACIÓN DE LLAMADA A API Y PROCESAMIENTO ---
-    # Aquí iría tu código para:
-    # 1. Obtener los indicativos de las estaciones de la tabla `tabla_est`.
-    # 2. Iterar y llamar a la API de AEMET para cada estación, pidiendo datos a partir de `ultimo_timestamp`.
-    # 3. Recopilar los resultados en un único DataFrame.
-    # 4. Limpiar y transformar el DataFrame para que coincida con la estructura de tu tabla `datos_meteorologicos`.
-
-    # Por ahora, devolvemos un DataFrame vacío como ejemplo.
-    # df_nuevos = tu_funcion_real_de_api(ultimo_timestamp)
-    # return df_nuevos
-
-    print(
-        "Simulación finalizada. En un caso real, aquí se devolverían los datos descargados."
-    )
+    #df = run_etl(ultimo_timestamp)
+  
+    #poblar_datos_meteorologicos(motor.connect(), df)
 
     return pd.DataFrame()

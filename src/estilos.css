@@ -56,15 +56,3 @@ hr, .stDivider {
     border: none;
     height: 1px;
 }
-
-/*body::after {
-    content: "CSS activo";
-    position: fixed;
-    bottom: 10px;
-    left: 10px;
-    background: green;
-    color: white;
-    padding: 5px 10px;
-    font-size: 12px;
-    z-index: 9999;
-}*/
