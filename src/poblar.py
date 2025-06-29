@@ -1,14 +1,19 @@
 import argparse
 import pandas as pd
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 from sqlalchemy import (
-    MetaData, Table, Column, String, Date, TIMESTAMP, Float, ForeignKey, Connection, create_engine
+    MetaData, Table, Column, String, Date, TIMESTAMP, Float, 
+    ForeignKey, Connection, create_engine
 )
 from sqlalchemy.dialects.mysql import TINYINT
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 #from conectar import conexion_a_bd
-
+from src.ETL import run_etl
 
 
 #motor = conexion_a_bd()
@@ -22,25 +27,28 @@ motor = create_engine(f"mysql+pymysql://{user}:{pw}@{host}:{port}/{bd}")
 # --- Definición de Tablas y Metadatos ---
 meta = MetaData()
 
+# Tabla provincias
 tabla_ccaa = Table(
     "comunidades", meta,
-    Column("codigo_ca", TINYINT(unsigned=True), primary_key=True),
-        Column("nombre_ccaa", String(50), nullable=False, unique=True),
+    Column("codigo_ca", TINYINT(unsigned = True), primary_key = True),
+    Column("nombre_ccaa", String(50), nullable = False, unique = True)
 )
 
+# Tabla provincias
 tabla_prov = Table(
     "provincias", meta,
-    Column("codigo_prov", TINYINT(unsigned=True), primary_key=True),
-    Column("nombre_prov", String(50), nullable=False, unique=True),
-    Column("codigo_ca", TINYINT(unsigned=True), ForeignKey("comunidades.codigo_ca"), nullable=False),
+    Column("codigo_prov", TINYINT(unsigned = True), primary_key = True),
+    Column("nombre_prov", String(50), nullable = False, unique = True),
+    Column("codigo_ca", TINYINT(unsigned = True), ForeignKey("comunidades.codigo_ca"), nullable = False)
 )
 
+# Datos meteorológicos
 tabla_dm = Table(
     "datos_meteorologicos", meta,
-    Column("id_descarga", String(50), nullable=False),
-    Column("fecha", Date, primary_key=True),
-    Column("codigo_indicativo", String(10), primary_key=True),
-    Column("codigo_prov", TINYINT(unsigned=True), ForeignKey("provincias.codigo_prov"), nullable=False),
+    Column("id_descarga", String(50), nullable = False),
+    Column("fecha", Date, primary_key = True),
+    Column("codigo_indicativo", String(10), primary_key = True),
+    Column("codigo_prov", TINYINT(unsigned = True), ForeignKey("provincias.codigo_prov"), nullable = False),
     Column("altitud", Float),
     Column("tmed", Float),
     Column("tmin", Float),
@@ -52,42 +60,45 @@ tabla_dm = Table(
     Column("timestamp_extraccion", TIMESTAMP),
 )
 
+# Tabla estaciones
 tabla_est = Table(
     "estaciones", meta,
-    Column("codigo_indicativo", String(10), primary_key=True),
-    Column("nombre_estacion", String(100), nullable=False),
-    Column("codigo_prov", TINYINT(unsigned=True), ForeignKey("provincias.codigo_prov"), nullable=False),
+    Column("codigo_indicativo", String(10), primary_key = True),
+    Column("nombre_estacion", String(100), nullable = False),
+    Column("codigo_prov", TINYINT(unsigned = True), ForeignKey("provincias.codigo_prov"), nullable = False),
     Column("start_date", Date),
     Column("end_date", Date),
     Column("latitud_dd", Float),
     Column("longitud_dd", Float),
-    Column("cluster", TINYINT(unsigned=True)),
-    extend_existing=True
+    Column("cluster", TINYINT(unsigned = True)),
+    extend_existing = True
 )
+
 # --- Funciones de Inserción por Tabla ---
 
 def poblar_comunidades(conector: Connection):
     """Inserta los datos estáticos de las comunidades autónomas."""
-    datos_ccaa = [
-        (1, 'Andalucía'), (2, 'Aragón'), (3, 'Illes Balears'), (4, 'Canarias'),
-        (5, 'Cantabria'), (6, 'Castilla - La Mancha'), (7, 'Castilla y León'),
-        (8, 'Cataluña'), (9, 'Ceuta'), (10, 'Extremadura'), (11, 'Galicia'),
-        (12, 'La Rioja'), (13, 'Madrid, Comunidad de'), (14, 'Melilla'),
-        (15, 'Murcia, Región de'), (16, 'Navarra, Comunidad Foral de'),
-        (17, 'País Vasco'), (18, 'Principado de Asturias'), (19, 'Comunitat Valenciana')
+    registros = [
+        {"codigo_ca": i + 1, "nombre_ccaa": nombre} for i, nombre in enumerate([
+            'Andalucía', 'Aragón', 'Illes Balears', 'Canarias', 'Cantabria',
+            'Castilla - La Mancha', 'Castilla y León', 'Cataluña', 'Ceuta', 'Extremadura',
+            'Galicia', 'La Rioja', 'Madrid, Comunidad de', 'Melilla', 'Murcia, Región de',
+            'Navarra, Comunidad Foral de', 'País Vasco', 'Principado de Asturias', 'Comunitat Valenciana'
+        ])
     ]
-    registros = [{"codigo_ca": c[0], "nombre_ccaa": c[1]} for c in datos_ccaa]
-    print("Poblando tabla 'comunidades'...")
+    print("Insertando comunidades autónomas...")
     try:
         # Usamos prefix_with("IGNORE") para que MySQL ignore los duplicados y no lance error
         conector.execute(tabla_ccaa.insert().prefix_with("IGNORE"), registros)
-        print("✅ Tabla 'comunidades' poblada/actualizada.")
+        print("✅ Comunidades insertadas correctamente.")
     except Exception as e:
-        print(f"❌ Error al poblar 'comunidades': {e}")
+        print(f"❌ Error insertando comunidades: {e}")
 
 def poblar_provincias(conector: Connection):
-    """Inserta los datos estáticos de las provincias."""
-    datos_provincias = [
+    """
+    Inserta los datos estáticos de las provincias.
+    """
+    provincias = [
         (1, 'Araba/Álava', 17), (2, 'Albacete', 6), (3, 'Alacant/Alicante', 19),
         (4, 'Almería', 1), (5, 'Ávila', 7), (6, 'Badajoz', 10), (7, 'Illes Balears', 3),
         (8, 'Barcelona', 8), (9, 'Burgos', 7), (10, 'Cáceres', 10), (11, 'Cádiz', 1),
@@ -105,7 +116,7 @@ def poblar_provincias(conector: Connection):
         (47, 'Valladolid', 7), (48, 'Bizkaia/Vizcaya', 17), (49, 'Zamora', 7),
         (50, 'Zaragoza', 2), (51, 'Ceuta', 9), (52, 'Melilla', 14)
     ]
-    registros = [{"codigo_prov": p[0], "nombre_prov": p[1], "codigo_ca": p[2]} for p in datos_provincias]
+    registros = [{"codigo_prov": p[0], "nombre_prov": p[1], "codigo_ca": p[2]} for p in provincias]
     print("Poblando tabla 'provincias'...")
     try:
         conector.execute(tabla_prov.insert().prefix_with("IGNORE"), registros)
@@ -126,35 +137,36 @@ def poblar_estaciones(conector: Connection, df_estaciones: pd.DataFrame):
     df_est_merged = pd.merge(
         df_estaciones,
         df_provincias_bd[['codigo_prov', 'nombre_prov']],
-        left_on='provincia',
-        right_on='nombre_prov',
-        how='left'
+        left_on = 'provincia',
+        right_on = 'nombre_prov',
+        how = 'left'
     )
 
     # Validar que todas las provincias se encontraron
     provincias_no_encontradas = df_est_merged[df_est_merged['codigo_prov'].isna()]['nombre_prov'].unique()
     if len(provincias_no_encontradas) > 0:
         print(f"⚠️ Provincias de estaciones no encontradas en la BD: {provincias_no_encontradas}. Se omitirán estas estaciones.")
-        df_est_merged.dropna(subset=['codigo_prov'], inplace=True)
+        df_est_merged.dropna(subset = ['codigo_prov'], inplace = True)
 
     df_est_merged['codigo_prov'] = df_est_merged['codigo_prov'].astype(int)
     
-    registros_para_procesar = df_est_merged.to_dict(orient='records')
+    registros = df_est_merged.to_dict(orient='records')
     
-    total = len(registros_para_procesar)
+    total = len(registros)
     print(f"🚀 Procesando {total} registros de estaciones...")
     
-    for row in registros_para_procesar:
-        print(row)
+    for fila in registros:
+        print(fila)
         registro_limpio = {
-            "codigo_indicativo": row["indicativo"],
-            #"nombre_estacion": row["nombre_estacion"],
-            "codigo_prov": row["codigo_prov"],
-            "start_date": row.get("start_date"),
-            "end_date": row.get("end_date"),
-            "latitud_dd": row.get("latitud_dd"),
-            "longitud_dd": row.get("longitud_dd"),
-            "cluster": row.get("cluster")
+            "codigo_indicativo": fila["indicativo"],
+            "nombre_estacion": fila["nombre_estacion"],
+            "codigo_prov": fila["codigo_prov"],
+            # Las siguientes columnas son opcionales, si no están presentes se inserta NULL
+            "start_date": fila.get("start_date"),
+            "end_date": fila.get("end_date"),
+            "latitud_dd": fila.get("latitud_dd"),
+            "longitud_dd": fila.get("longitud_dd"),
+            "cluster": fila.get("cluster")
         }
         
         try:
@@ -164,7 +176,7 @@ def poblar_estaciones(conector: Connection, df_estaciones: pd.DataFrame):
             conector.execute(
                 tabla_est.update()
                 .where(tabla_est.c.codigo_indicativo == registro_limpio["codigo_indicativo"])
-                #.values(cluster=registro_limpio["cluster"])
+                .values(cluster = registro_limpio["cluster"])
                 .values(**registro_limpio)
             )
         except Exception as e:
@@ -180,33 +192,36 @@ def poblar_datos_meteorologicos(conector: Connection, df_dm: pd.DataFrame):
     df_provincias_bd = pd.read_sql_table(tabla_prov.name, conector)
 
     # Optimización: Renombrar columna en df_dm para el merge
-    df_dm.rename(columns={'provincia': 'nombre_prov'}, inplace=True)
+    df_dm.rename(columns = {'provincia': 'nombre_prov'}, inplace = True)
 
     # Unir para obtener codigo_prov de forma vectorizada
     df_dm_merged = pd.merge(
         df_dm,
         df_provincias_bd[['codigo_prov', 'nombre_prov']],
-        on='nombre_prov',
-        how='left'
+        on = 'nombre_prov',
+        how = 'left'
     )
 
     # Validar y limpiar
     provincias_no_encontradas = df_dm_merged[df_dm_merged['codigo_prov'].isna()]['nombre_prov'].unique()
     if len(provincias_no_encontradas) > 0:
         print(f"⚠️ Provincias de datos meteorológicos no encontradas en la BD: {provincias_no_encontradas}. Se omitirán estos registros.")
-        df_dm_merged.dropna(subset=['codigo_prov'], inplace=True)
+        df_dm_merged.dropna(subset = ['codigo_prov'], inplace = True)
 
     # Seleccionar y ordenar columnas según la tabla de la BD para evitar errores
     columnas_tabla_dm = [c.name for c in tabla_dm.columns]
     df_para_insertar = df_dm_merged[[col for col in columnas_tabla_dm if col in df_dm_merged.columns]]
+    # Si viene algún archivo NaN se renombra a None de Python, que es el
+    # equivalente a NULL en SQL y es compatible con el driver de la base de datos.
+    df_para_insertar = df_para_insertar.astype(object).where(pd.notnull(df_para_insertar), None)
 
     # Convertir a lista de diccionarios
     registros = df_para_insertar.to_dict(orient='records')
 
     # Usar la función de inserción por lotes
-    insertar_por_lotes(tabla_dm, registros, conector, tamaño_lote=10000)
+    insertar_por_lotes(tabla_dm, registros, conector, tamaño_lote = 10000)
 
-def insertar_por_lotes(tabla, datos, conn, tamaño_lote=100, verbose=True):
+def insertar_por_lotes(tabla: Table, datos: list, conn: Connection, tamaño_lote: int = 100, verbose: bool = True):
     """
     Inserta registros en una tabla SQLAlchemy por lotes.
     Usa INSERT IGNORE para evitar fallos por duplicados (específico de MySQL).
@@ -236,7 +251,7 @@ def insertar_por_lotes(tabla, datos, conn, tamaño_lote=100, verbose=True):
         if verbose:
             print(f"✅ Inserción por lotes finalizada para '{tabla.name}': {total} registros procesados.")
 
-    except Exception as e:
+    except OperationalError as e:
                 print(f"❌ Error durante la inserción por lotes en '{tabla.name}': {e}")
 
 def main(ruta_pkl: str, tabla_a_poblar: str, ruta_csv_estaciones: str):
@@ -269,12 +284,14 @@ def main(ruta_pkl: str, tabla_a_poblar: str, ruta_csv_estaciones: str):
             })
             poblar_estaciones(conector, df_est_preparado)
 
-        # La carga de datos meteorológicos masivos se hace desde el PKL
         if tabla_a_poblar in ["datos_meteorologicos", "todas"]:
-            print(f"Cargando datos desde '{ruta_pkl}'...")
-            df_completo = pd.read_pickle(ruta_pkl)
-
-            df_dm = df_completo.rename(columns={"indicativo": "codigo_indicativo"})
+            # if ruta_pkl:
+            #     print(f"Cargando datos desde '{ruta_pkl}'...")
+            #     df_completo = pd.read_pickle(ruta_pkl)
+            # else:
+            df_completo = run_etl(modo = "masivo")
+            #df_completo = pd.read_pickle(ruta_pkl)
+            df_dm = df_completo.rename(columns = {"indicativo": "codigo_indicativo"})
             poblar_datos_meteorologicos(conector, df_dm)
 
 
@@ -287,24 +304,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tabla",
         choices=["comunidades", "provincias", "estaciones", "datos_meteorologicos", "todas"],
-        default="todas",
-        help="Especifica la tabla a poblar. 'todas' para poblar todas las tablas (comportamiento por defecto)."
+        default = "todas",
+        help = "Especifica la tabla a poblar. 'todas' para poblar todas las tablas (comportamiento por defecto)."
     )
     
     parser.add_argument(
         "--fichero",
-        default="data/temperaturas_limpias_10_años_final.pkl",
-        help="Ruta al archivo .pkl con los datos."
+        default = "data/temperaturas_limpias_10_años_final.pkl",
+        help = "Ruta al archivo .pkl con los datos."
     )
     
     parser.add_argument(
         "--csv_estaciones",
-        default=r"C:\Users\rualg\Downloads\estaciones_nombre_indicativo.csv",
-        help="Ruta al archivo .csv con la información de las estaciones."
+        default = r"C:\Users\rualg\Downloads\estaciones_nombre_indicativo.csv",
+        help = "Ruta al archivo .csv con la información de las estaciones."
     )
     args = parser.parse_args()
 
-    main(ruta_pkl=args.fichero, tabla_a_poblar=args.tabla, ruta_csv_estaciones=args.csv_estaciones)
-    print(f"Carga de '{args.tabla}' completada ✅")
+    main(ruta_pkl = args.fichero, tabla_a_poblar = args.tabla, ruta_csv_estaciones = args.csv_estaciones)
 
 

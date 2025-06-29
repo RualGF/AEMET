@@ -1,19 +1,20 @@
-CREATE TABLE datos_meteorologicos (
-    id_descarga VARCHAR(50) NOT NULL,
-    fecha DATE NOT NULL,
-    indicativo_estacion VARCHAR(10) NOT NULL,
-    nombre_estacion VARCHAR(100),
-    -- nombre_provincia VARCHAR(50), -- No la guardamos si ya tenemos codigo_provincia
-    codigo_provincia TINYINT UNSIGNED, -- FK a provincias
-    altitud SMALLINT UNSIGNED,
-    tmed DECIMAL(4,1),
-    tmin DECIMAL(4,1),
-    tmax DECIMAL(4,1),
-    prec DECIMAL(5,1),
-    velmedia DECIMAL(4,1),
-    racha DECIMAL(4,1),
-    hrMedia SMALLINT,
-    timestamp_extraccion DATETIME NOT NULL,
-    PRIMARY KEY (fecha, indicativo_estacion), -- Clave primaria compuesta
-    FOREIGN KEY (codigo_provincia) REFERENCES provincias(codigo_prov)
-);
+CREATE TABLE `datos_meteorologicos` (
+  `id_descarga` varchar(50) COLLATE utf8mb4_es_0900_ai_ci NOT NULL,
+  `fecha` date NOT NULL,
+  `codigo_indicativo` varchar(10) COLLATE utf8mb4_es_0900_ai_ci NOT NULL,
+  `codigo_prov` tinyint unsigned NOT NULL,
+  `altitud` float DEFAULT NULL,
+  `tmed` float DEFAULT NULL,
+  `tmin` float DEFAULT NULL,
+  `tmax` float DEFAULT NULL,
+  `prec` float DEFAULT NULL,
+  `velmedia` float DEFAULT NULL,
+  `racha` float DEFAULT NULL,
+  `hrMedia` float DEFAULT NULL,
+  `timestamp_extraccion` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`fecha`,`codigo_indicativo`),
+  KEY `codigo_prov` (`codigo_prov`),
+  KEY `datos_meteorologicos_ibfk_2` (`codigo_indicativo`),
+  CONSTRAINT `datos_meteorologicos_ibfk_1` FOREIGN KEY (`codigo_prov`) REFERENCES `provincias` (`codigo_prov`),
+  CONSTRAINT `datos_meteorologicos_ibfk_2` FOREIGN KEY (`codigo_indicativo`) REFERENCES `estaciones` (`codigo_indicativo`)
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_es_0900_ai_ci
