@@ -1,7 +1,10 @@
 from sqlalchemy import create_engine, text
+from conectar import conexion_a_bd as conectar
+
 
 # Conexión
-engine = create_engine("mysql+pymysql://root:s41nt@localhost:3306/aemet")
+
+engine = conectar()
 
 def borrar_por_lotes(nombre_tabla: str, tam_lote: int = 10000):
     """
