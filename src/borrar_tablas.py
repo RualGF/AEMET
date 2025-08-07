@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from conectar import conexion_a_bd as conectar
 
 

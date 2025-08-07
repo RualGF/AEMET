@@ -96,7 +96,6 @@ for clust in clusters:
     ].tolist()
     indicativos = df_estaciones.loc[df_estaciones["cluster"] == clust, "indicativo"].tolist()
 
-    #df_clust = df[df["codigo_indicativo"].isin(indicativos)].copy()
     if not indicativos:
         print(f"⚠️  Clúster {clust} no tiene estaciones. Saltando.")
         continue
@@ -110,7 +109,7 @@ for clust in clusters:
     df_clust = df_clust.drop(
         columns=["id_descarga", "timestamp_extraccion", "codigo_indicativo", "codigo_prov"], errors="ignore"
     )
-    #df_clust = df_clust.dropna()
+    
     df_numeric = df_clust.select_dtypes(include=[np.number])
 
     if len(df_numeric) <= WINDOW_SIZE:
@@ -129,7 +128,7 @@ for clust in clusters:
     # Crear secuencias
     X, y = create_sequences(scaled_df, TARGET_COL, WINDOW_SIZE)
     X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, shuffle=False
+        X, y, test_size=0.2, shuffle=False, random_state=42
     )
 
     # Modelo GRU
@@ -156,7 +155,7 @@ for clust in clusters:
         batch_size=BATCH_SIZE,
         validation_data=(X_val, y_val),
         callbacks=[parada],
-        verbose=1
+        verbose="1"
     )
 
     # Predicción ONE-STEP
