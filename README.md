@@ -1,4 +1,4 @@
-# Análisis y Predicción de Condiciones Meteorológicas en España
+# Pipeline de Datos Meteorológicos (AEMET)
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.33-ff69b4.svg)](https://streamlit.io)
@@ -6,32 +6,48 @@
 [![Pandas](https://img.shields.io/badge/Pandas-2.x-blue.svg)](https://pandas.pydata.org/)
 [![Keras](https://img.shields.io/badge/Keras-3.x-red.svg)](https://keras.io/)
 
-## Descripción
-Este proyecto es una aplicación web interactiva, desarrollada con Streamlit, para visualizar y analizar datos meteorológicos de España. La aplicación consume datos de la API de AEMET, los procesa a través de un pipeline ETL y los almacena en una base de datos MySQL para su posterior análisis y modelado.
+## 📌 Descripción
+
+Proyecto de ingeniería de datos orientado a la ingesta, procesamiento y almacenamiento de datos meteorológicos de España utilizando la API de AEMET.
+
+Se implementa un pipeline ETL completo en Python que extrae datos desde una API externa, los transforma y los almacena en una base de datos MySQL para su posterior análisis y explotación.
+
+Sobre este pipeline se construye una aplicación en Streamlit para la visualización de datos y el consumo de información procesada.
 
 ---
 
-## 📜 Índice
+## 📊 Arquitectura del sistema
 
-- Características principales
-- Estructura del proyecto
-- Instalación y configuración
-  - Pre-requisitos
-  - Pasos de instalación
-- Uso de la aplicación
-- Tecnologías utilizadas
-- Autores
+El flujo de datos del proyecto sigue la siguiente estructura:
 
----
+AEMET API 
+   ↓
+Extracción (Requests)
+   ↓
+Transformación (Pandas)
+   ↓
+Carga (MySQL)
+   ↓
+Consulta de datos
+   ↓
+Visualización (Streamlit)
 
-## ✨ Características principales
+### Componentes principales:
 
-- **Análisis Exploratorio de Datos (EDA)**: Visualiza datos meteorológicos agregados en mapas coropléticos interactivos, con filtros por comunidad autónoma, provincia y rango de fechas.
-- **Comparador anual**: Compara tendencias de métricas específicas (temperatura, precipitación, etc.) entre dos años para una provincia seleccionada.
-- **Predicciones con Deep Learning**: Utiliza modelos pre-entrenados (GRU y Redes Neuronales) para pronosticar la temperatura media en estaciones específicas.
-- **Predicciones con Prophet**: Implementa el modelo Prophet de Facebook para realizar pronósticos de series temporales.
-- **Actualización de datos**: Funcionalidad para actualizar la base de datos con los datos más recientes de la API de AEMET.
-- **Visualización de la base de datos**: Muestra el Modelo Entidad-Relación (MER) y la estructura de las tablas de la base de datos.
+Extracción: consumo de datos desde la API REST de AEMET
+Transformación: limpieza, normalización y estructuración de datos
+Carga: almacenamiento en base de datos relacional (MySQL)
+Consumo: consultas SQL y visualización interactiva
+
+El sistema permite actualizar los datos mediante scripts de ingesta ejecutables manualmente.
+
+## ⚙️ Funcionalidades principales
+* Pipeline ETL completo desde API externa
+* Almacenamiento estructurado en base de datos relacional
+* Consultas de datos para análisis
+* Visualización interactiva de datos meteorológicos
+* Comparación de métricas entre periodos temporales
+* Actualización de datos desde la API
 
 ---
 
@@ -41,7 +57,7 @@ Este proyecto es una aplicación web interactiva, desarrollada con Streamlit, pa
 PROYECTO-FINAL/
 │
 ├── .streamlit/
-│   └── secrets.toml         # Fichero para credenciales (BD, API keys) - NO INCLUIDO EN GIT
+│   └── secrets.toml         # Credenciales (no incluido en Git)
 │
 ├── data/                    # Ficheros de datos estáticos y cacheados
 │   ├── spain-provinces.geojson
@@ -89,9 +105,9 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
 
 ### Pre-requisitos
 
-- Python 3.10 o superior.
-- Un servidor de MySQL en ejecución.
-- Git.
+* Python 3.10+
+* MySQL en ejecución
+* Git
 
 ### Pasos de instalación
 
