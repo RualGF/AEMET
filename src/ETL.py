@@ -4,7 +4,7 @@ import sys
 # Añadir el directorio raíz del proyecto al path de Python
 # para que pueda encontrar el módulo 'limpieza'
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.hacer_peticion import extraer_ultimos_tres_dias, extraer_por_años
+from src.extractor_aemet import extraer_por_anyos, extraer_ultimos_tres_dias
 from limpieza.clean_timestamp import clean_timestamps
 from limpieza.standarize_provinces import standardize_provinces
 from limpieza.convert_types import convert_types
@@ -41,7 +41,7 @@ def extract_data(modo: str = "actualizar"):
             return df
 
         elif modo == "masivo":
-            csv_paths = extraer_por_años()  # Devuelve lista de CSVs
+            csv_paths = extraer_por_anyos()  # Devuelve lista de CSVs
             return csv_paths
 
         else:

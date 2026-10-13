@@ -88,31 +88,30 @@ def dibujar_coropletico_plotly(datos: pd.DataFrame, nombre_columna: str, texto_t
         geojson_key = 'properties.cod_ccaa'
         location_col = 'cod_ccaa'
         base = pd.DataFrame([
-            {'cod_ccaa': feature['properties']['cod_ccaa'], 'nombre_ccaa': feature['properties']['name']}
+            {'cod_ccaa': feature['properties']['cod_ccaa'], 'nombre': feature['properties']['name']}
             for feature in geojson_data['features']
         ])
         base['cod_ccaa'] = base['cod_ccaa'].astype(str).str.zfill(2)
         
-        
+        datos = datos.copy()
         datos['cod_ccaa'] = datos['cod_ccaa'].astype(str).str.zfill(2)
-        
-        datos = base.merge(datos, on = ['cod_ccaa', 'nombre_ccaa'], how = 'left')
-        datos = datos.rename(columns = {"nombre_ccaa": "nombre"})
+        cols_datos = [c for c in datos.columns if c not in ('nombre_ccaa', 'nombre')]
+        datos = base.merge(datos[cols_datos].drop_duplicates(subset=['cod_ccaa']), on = 'cod_ccaa', how = 'left')
         
     else:
         geojson_data = geojson_provincias
         geojson_key = 'properties.cod_prov'
         location_col = 'codigo_prov'
         base = pd.DataFrame([
-            {'codigo_prov': feature['properties']['cod_prov'], 'nombre_prov': feature['properties']['name']}
+            {'codigo_prov': feature['properties']['cod_prov'], 'nombre': feature['properties']['name']}
             for feature in geojson_data['features']
         ])
         base['codigo_prov'] = base['codigo_prov'].astype(str).str.zfill(2)
         
+        datos = datos.copy()
         datos['codigo_prov'] = datos['codigo_prov'].astype(str).str.zfill(2)
-        
-        datos = base.merge(datos, on = ['codigo_prov', 'nombre_prov'], how = 'left')
-        datos = datos.rename(columns = {"nombre_prov": "nombre"})
+        cols_datos = [c for c in datos.columns if c not in ('nombre_prov', 'nombre')]
+        datos = base.merge(datos[cols_datos].drop_duplicates(subset=['codigo_prov']), on = 'codigo_prov', how = 'left')
     
     # Añadir columna auxiliar para gestionar NaN con color gris
     datos['_valor_plot'] = datos[nombre_columna].copy().fillna(-9999)

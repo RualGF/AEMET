@@ -4,13 +4,14 @@ import streamlit as st
 from sqlalchemy import create_engine
 
 @st.cache_resource(show_spinner="Conectando a la base de datos...")
-def conexion_a_bd():
+def conexion_a_bd(seccion = "database"):
     """Retorna una nueva conexión desde el motor."""
-    usuario = st.secrets["database"]["user"]
-    pw = st.secrets["database"]["password"]
-    bd = st.secrets["database"]["name"]
-    servidor = st.secrets["database"]["host"]
-    puerto = st.secrets["database"]["port"]
+    config_bd = st.secrets[seccion]
+    usuario = config_bd["user"]
+    pw = config_bd["password"]
+    bd = config_bd["name"]
+    servidor = config_bd["host"]
+    puerto = config_bd["port"]
 
     # Conexión para Mysql local
     motor = create_engine(f"mysql+pymysql://{usuario}:{pw}@{servidor}:{puerto}/{bd}")

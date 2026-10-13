@@ -28,7 +28,7 @@ def knn_impute(df, numeric_cols=None):
     if missing_cols:
         raise ValueError(f"Faltan las columnas requeridas: {missing_cols}")
     
-            df_knn[col] = df_knn[col].fillna(df_knn[col].median())
+        df_knn[col] = df_knn[col].fillna(df_knn[col].median())
         
         scaler = StandardScaler()
         df_knn_scaled = scaler.fit_transform(df_knn)

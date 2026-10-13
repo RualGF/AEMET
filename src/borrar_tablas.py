@@ -1,5 +1,5 @@
 from sqlalchemy import text
-from conectar import conexion_a_bd as conectar
+from src.conectar import conexion_a_bd as conectar
 
 
 # Conexión

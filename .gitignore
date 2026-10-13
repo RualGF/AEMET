@@ -1,11 +1,15 @@
 # Variable de entorno
 .entorno/
+.venv/
+env/
+venv/
 
 # Archivos de secretos de Streamlit
 .streamlit/secrets.toml
 
-# Archivos temporales
+# Archivos temporales y logs
 .ipynb_checkpoints/
+*.log
 
 # Python cache
 __pycache__/
@@ -19,16 +23,19 @@ src/__pycache__/
 .entorno
 *.entorno
 
-# Archivos de datos generados
+# Archivos de datos generados y pesados (>100MB)
+*.csv
 data/*.csv
 data/*.pkl
+data/checkpoints_descarga/
 
 # Notebooks de Jupyter
 notebooks/
 *.ipynb
 !notebooks/Extracción y limpieza.ipynb
 
-# Carpeta innecesaria
+# Carpetas de datos locales
 data/historico/
+aemet_data/
 
 

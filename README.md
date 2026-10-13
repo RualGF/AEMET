@@ -81,7 +81,7 @@ PROYECTO-FINAL/
 │   ├── dibujar.py           # Funciones para generar gráficos
 │   ├── ETL.py               # Pipeline de extracción, transformación y carga
 │   ├── extraer_datos.py     # Funciones para consultas a la BD
-│   ├── hacer_peticion.py    # Lógica para peticiones a la API de AEMET
+│   ├── extractor_aemet.py   # Orquestación de extracción de datos desde la API de AEMET
 │   ├── personalizacion.py   # Funciones para personalizar los estilos de Streamlit
 │   └── poblar.py            # Scripts para crear y poblar tablas
 │
@@ -146,9 +146,8 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno local.
     port = 3306
     name = "aemet" # O el nombre que le des a tu base de datos
 
-    # NOTA: La API Key de AEMET está hardcodeada en src/hacer_peticion.py
-    # pero idealmente también iría aquí.
-    # API_KEY = "tu_api_key_aemet"
+    [api_aemet]
+    API_KEY = "tu_api_key_aemet"
     ```
 
 5.  **Crear y poblar la base de datos:**

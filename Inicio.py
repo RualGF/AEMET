@@ -1,8 +1,18 @@
 import streamlit as st
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+def configurar_api_key_aemet():
+    if os.getenv("AEMET_API_KEY"):
+        return
+
+    os.environ["AEMET_API_KEY"] = st.secrets["api_aemet"]["API_KEY"]
+
+
+configurar_api_key_aemet()
 
 from src.personalizacion import load_css
 
@@ -67,7 +77,6 @@ def main():
     
     """)
 
-  
     st.subheader("Navegación Principal")
     
     col1, col2, col3 = st.columns(3, gap = "large")
@@ -77,14 +86,14 @@ def main():
             st.markdown("Filtra y visualiza datos meteorológicos por comunidad, provincia y fechas para un análisis personalizado.")
             if st.button("Ir a análisis", key = "eda", use_container_width = True):
                 st.switch_page("pages/1_EDA.py")
-      
+
     with col2:
         with st.container(border = True):
             st.markdown("##### 📊 Comparador de métricas por provincia  y cada 2 años")
             st.markdown("Filtra y visualiza métricas de dos años de una provincia seleccionada.")
             if st.button("Ir a comparador", key="comparador", use_container_width=True):
                 st.switch_page("pages/2_Comparador.py")
-  
+
     with col3:
         with st.container(border = True):
             st.markdown("##### 🗄️ Base de datos")
@@ -96,7 +105,7 @@ def main():
     st.divider()
     col4, col5, col6 = st.columns(3, gap = "large")
     with col4:
-         with st.container(border = True):
+        with st.container(border = True):
             st.markdown("##### 🤖 Modelos GRU y NN")
             st.markdown("Modelos precargados de deep learning para predicciones")
             if st.button("Ir a modelos", key="modelos", use_container_width=True):
