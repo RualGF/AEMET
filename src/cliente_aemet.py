@@ -77,8 +77,8 @@ def solicitar_datos_aemet(
             logger.warning(f"  fallo {type(e).__name__}, espero {espera_efectiva:.2f}s e intento otra vez")
             time.sleep(espera_efectiva)
             espera = calcular_espera_reintento(espera, factor_backoff, espera_maxima)
-        except requests.HTTPError as e:
-            logger.error(f"  error HTTP {e.response.status_code}, no intento más")
+        except requests.HTTPError:
+            logger.exception("  error HTTP en petición, no intento más")
             return None
     logger.error("  se acabaron los reintentos")
     return None

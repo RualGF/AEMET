@@ -91,8 +91,8 @@ def descargar_bloque_todas_estaciones(fecha_ini: date, fecha_fin: date, api_key:
         if isinstance(registros, str):
             registros = json.loads(registros)
         return registros if isinstance(registros, list) else []
-    except Exception as e:
-        logger.error(f"Error parseando respuesta para bloque {fecha_ini} a {fecha_fin}: {e}")
+    except Exception:
+        logger.exception(f"Error parseando respuesta para bloque {fecha_ini} a {fecha_fin}")
         return []
 
 

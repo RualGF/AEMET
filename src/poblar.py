@@ -118,6 +118,44 @@ def poblar_provincias(conector: Connection):
         print(f"❌ Error al poblar 'provincias': {e}")
 
 
+def _construir_registro_estacion(fila: dict, col_nombre: str | None, col_indicativo: str) -> dict:
+    nombre_est = fila.get(col_nombre) if col_nombre else fila.get(col_indicativo)
+    if not nombre_est or pd.isna(nombre_est):
+        nombre_est = str(fila[col_indicativo])
+
+    return {
+        "codigo_indicativo": fila[col_indicativo],
+        "nombre_estacion": str(nombre_est),
+        "codigo_prov": fila["codigo_prov"],
+        "start_date": fila.get("start_date") if pd.notna(fila.get("start_date")) else None,
+        "end_date": fila.get("end_date") if pd.notna(fila.get("end_date")) else None,
+        "latitud_dd": fila.get("latitud_dd") if pd.notna(fila.get("latitud_dd")) else None,
+        "longitud_dd": fila.get("longitud_dd") if pd.notna(fila.get("longitud_dd")) else None,
+        "cluster": int(fila["cluster"]) if pd.notna(fila.get("cluster")) else None,
+    }
+
+
+def _upsert_estacion(conector: Connection, registro_limpio: dict):
+    try:
+        conector.execute(tabla_est.insert(), registro_limpio)
+    except IntegrityError:
+        conector.execute(
+            tabla_est.update()
+            .where(tabla_est.c.codigo_indicativo == registro_limpio["codigo_indicativo"])
+            .values(**registro_limpio)
+        )
+    except Exception as e:
+        print(f"❌ Error procesando estación {registro_limpio['codigo_indicativo']}: {e}")
+
+
+def _obtener_columna_nombre(columns) -> str | None:
+    if "nombre_estacion" in columns:
+        return "nombre_estacion"
+    if "nombre" in columns:
+        return "nombre"
+    return None
+
+
 def poblar_estaciones(conector: Connection, df_estaciones: pd.DataFrame):
     """
     Inserta o actualiza los datos de las estaciones.
@@ -137,13 +175,14 @@ def poblar_estaciones(conector: Connection, df_estaciones: pd.DataFrame):
                         df_estaciones,
                         df_inv[["indicativo", "nombre"]],
                         on="indicativo",
-                        how="left"
+                        how="left",
+                        validate="many_to_one"
                     )
             except Exception as e:
                 print(f"⚠️ No se pudo cargar inventario_estaciones.json: {e}")
 
     col_indicativo = "codigo_indicativo" if "codigo_indicativo" in df_estaciones.columns else "indicativo"
-    col_nombre = "nombre_estacion" if "nombre_estacion" in df_estaciones.columns else ("nombre" if "nombre" in df_estaciones.columns else None)
+    col_nombre = _obtener_columna_nombre(df_estaciones.columns)
     col_prov = "nombre_prov" if "nombre_prov" in df_estaciones.columns else "provincia"
 
     df_est_merged = pd.merge(
@@ -166,31 +205,8 @@ def poblar_estaciones(conector: Connection, df_estaciones: pd.DataFrame):
     print(f"🚀 Procesando {total} registros de estaciones...")
     
     for fila in registros:
-        nombre_est = fila.get(col_nombre) if col_nombre else fila.get(col_indicativo)
-        if not nombre_est or pd.isna(nombre_est):
-            nombre_est = str(fila[col_indicativo])
-
-        registro_limpio = {
-            "codigo_indicativo": fila[col_indicativo],
-            "nombre_estacion": str(nombre_est),
-            "codigo_prov": fila["codigo_prov"],
-            "start_date": fila.get("start_date") if pd.notna(fila.get("start_date")) else None,
-            "end_date": fila.get("end_date") if pd.notna(fila.get("end_date")) else None,
-            "latitud_dd": fila.get("latitud_dd") if pd.notna(fila.get("latitud_dd")) else None,
-            "longitud_dd": fila.get("longitud_dd") if pd.notna(fila.get("longitud_dd")) else None,
-            "cluster": int(fila["cluster"]) if pd.notna(fila.get("cluster")) else None
-        }
-        
-        try:
-            conector.execute(tabla_est.insert(), registro_limpio)
-        except IntegrityError:
-            conector.execute(
-                tabla_est.update()
-                .where(tabla_est.c.codigo_indicativo == registro_limpio["codigo_indicativo"])
-                .values(**registro_limpio)
-            )
-        except Exception as e:
-            print(f"❌ Error procesando estación {registro_limpio['codigo_indicativo']}: {e}")
+        reg = _construir_registro_estacion(fila, col_nombre, col_indicativo)
+        _upsert_estacion(conector, reg)
             
     print(f"✅ Finalizado procesamiento de estaciones: {total} registros procesados.")
 
@@ -232,10 +248,10 @@ def poblar_datos_meteorologicos(conector: Connection, df_dm: pd.DataFrame):
     df_para_insertar = df_para_insertar.astype(object).where(pd.notnull(df_para_insertar), None)
 
     registros = df_para_insertar.to_dict(orient='records')
-    insertar_por_lotes(tabla_dm, registros, conector, tamaño_lote=10000)
+    insertar_por_lotes(tabla_dm, registros, conector, tamano_lote=10000)
 
 
-def insertar_por_lotes(tabla: Table, datos: list, conn: Connection = motor.connect(), tamaño_lote: int = 10000, verbose: bool = True):
+def insertar_por_lotes(tabla: Table, datos: list, conn: Connection = motor.connect(), tamano_lote: int = 10000, verbose: bool = True):
     """
     Inserta o actualiza registros en una tabla SQLAlchemy por lotes.
     Usa 'INSERT ... ON DUPLICATE KEY UPDATE' para un 'upsert' eficiente en MySQL.
@@ -254,13 +270,13 @@ def insertar_por_lotes(tabla: Table, datos: list, conn: Connection = motor.conne
     upsert_stmt = insertar_stmt.on_duplicate_key_update(columnas_a_actualizar)
 
     if verbose:
-        print(f"🚀 Iniciando inserción/actualización de {total} registros en '{tabla.name}' (lotes de {tamaño_lote})...")
+        print(f"🚀 Iniciando inserción/actualización de {total} registros en '{tabla.name}' (lotes de {tamano_lote})...")
     
     try:
-        for i in range(0, total, tamaño_lote):
-            lote = datos[i:i + tamaño_lote]
-            if verbose and (i % 50000 == 0 or i + tamaño_lote >= total):
-                print(f"📦 Progreso en '{tabla.name}': registros {i+1} a {min(i + tamaño_lote, total)} de {total}")
+        for i in range(0, total, tamano_lote):
+            lote = datos[i:i + tamano_lote]
+            if verbose and (i % 50000 == 0 or i + tamano_lote >= total):
+                print(f"📦 Progreso en '{tabla.name}': registros {i+1} a {min(i + tamano_lote, total)} de {total}")
             conn.execute(upsert_stmt, lote)
         if verbose:
             print(f"✅ Inserción/actualización por lotes finalizada para '{tabla.name}': {total} registros procesados.")

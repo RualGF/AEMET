@@ -8,7 +8,7 @@ import sys
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJydWFsZ2ZAZ21haWwuY29tIiwianRpIjoiN2Q5M2RjMDMtNWY5Yi00YzYwLWJmYTAtNTc2MTNiNDgyZjkxIiwiaXNzIjoiQUVNRVQiLCJpYXQiOjE3NDg0NDQ5MzIsInVzZXJJZCI6IjdkOTNkYzAzLTVmOWItNGM2MC1iZmEwLTU3NjEzYjQ4MmY5MSIsInJvbGUiOiIifQ.lb02yR53ROH4319ZiiHDjel7j_ingoIqmTswzt2d6uc"  # pon tu clave aquí
+API_KEY = os.getenv("AEMET_API_KEY", "")
 BASE_URL = "https://opendata.aemet.es/opendata/api/valores/climatologicos/diarios/datos"
 
 DATA_DIR = "aemet_data"
@@ -17,11 +17,29 @@ LOG_FILE = "log.txt"
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
+def _peticion_datos_aemet(fecha_ini, fecha_fin):
+    url = f"{BASE_URL}/fechaini/{fecha_ini}/fechafin/{fecha_fin}/todasestaciones"
+    headers = {
+        'cache-control': "no-cache",
+        'api_key': API_KEY
+    }
+    r = requests.get(url, headers=headers, timeout=30)
+    r.raise_for_status()
+    response_json = r.json()
+    if response_json.get("estado") == 404:
+        return None
+    data_url = response_json.get("datos")
+    if not data_url:
+        return None
+    r_data = requests.get(data_url, timeout=60)
+    r_data.raise_for_status()
+    return r_data.json()
+
+
 def fetch_and_save_block(fecha_ini, fecha_fin, max_retries=5):
     """
     Descarga un bloque y lo guarda en un CSV.
     Incluye backoff progresivo en caso de fallo.
-    USA HEADERS PARA LA API KEY Y CONTRA CACHÉ.
     """
     filename = os.path.join(DATA_DIR, f"aemet_{fecha_ini.split('T')[0]}_{fecha_fin.split('T')[0]}.csv")
     if os.path.exists(filename):
@@ -30,50 +48,21 @@ def fetch_and_save_block(fecha_ini, fecha_fin, max_retries=5):
     delay = 10
     for attempt in range(1, max_retries + 1):
         try:
-            # --- CAMBIOS CLAVE AQUÍ ---
-            url = f"{BASE_URL}/fechaini/{fecha_ini}/fechafin/{fecha_fin}/todasestaciones"
-            headers = {
-                'cache-control': "no-cache",
-                'api_key': API_KEY  # La clave ahora va en el header
-            }
-            
-            # 1. Petición inicial para obtener la URL de los datos
-            # quitamos el 'params' y usamos 'headers'
-            r = requests.get(url, headers=headers, timeout=30)
-            r.raise_for_status()
-            
-            response_json = r.json()
-            
-            # La API devuelve un estado 200 pero puede indicar que no hay datos
-            if response_json.get("estado") == 404:
-                 return ("nodata", f"⚠️ Sin datos (respuesta 404 de la API) en {fecha_ini} - {fecha_fin}")
-
-            data_url = response_json.get("datos")
-            if not data_url:
-                return ("nodata", f"⚠️ Sin datos (URL no encontrada) en {fecha_ini} - {fecha_fin}")
-
-            # 2. Descarga real de los datos desde la URL obtenida
-            # Esta segunda petición no necesita headers
-            r_data = requests.get(data_url, timeout=60)
-            r_data.raise_for_status()
-            data = r_data.json()
-
+            data = _peticion_datos_aemet(fecha_ini, fecha_fin)
             if not data:
-                return ("nodata", f"⚠️ Sin datos (fichero JSON vacío) en {fecha_ini} - {fecha_fin}")
+                return ("nodata", f"⚠️ Sin datos en {fecha_ini} - {fecha_fin}")
 
-            # Guardamos CSV
             df = pd.DataFrame(data)
             df.to_csv(filename, index=False)
             return ("ok", f"✅ Guardados {len(df)} registros de {fecha_ini} - {fecha_fin}")
 
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
+            if e.response is not None and e.response.status_code == 404:
                 return ("nodata", f"⚠️ Sin datos (HTTP 404) en {fecha_ini} - {fecha_fin}")
-            # Otros errores HTTP se reintentan
             if attempt >= max_retries:
-                 with open(LOG_FILE, "a") as f:
+                with open(LOG_FILE, "a") as f:
                     f.write(f"{fecha_ini},{fecha_fin}\n")
-                 return ("fail", f"❌ Error HTTP en {fecha_ini} - {fecha_fin}: {e}")
+                return ("fail", f"❌ Error HTTP en {fecha_ini} - {fecha_fin}: {e}")
             time.sleep(delay)
             delay *= 2
 
@@ -155,14 +144,13 @@ def main(retries_only=False, workers=3):
         results = process_intervals(intervals, workers=workers)
 
     # 📊 Resumen final
-    total = len(results)
     ok = results.count("ok")
     skip = results.count("skip")
     nodata = results.count("nodata")
     fail = results.count("fail")
     elapsed = time.time() - start_time
 
-    print("\n📊 Resumen de ejecución:")
+    print(f"\n📊 Resumen de ejecución ({len(results)} intervalos totales):")
     print(f"   ✅ Éxito: {ok}")
     print(f"   ⏩ Saltados (ya estaban): {skip}")
     print(f"   ⚠️ Sin datos: {nodata}")

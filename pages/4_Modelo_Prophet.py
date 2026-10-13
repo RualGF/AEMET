@@ -130,26 +130,147 @@ def make_prophet_prediction(
     return forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]], forecast, m
 
 
+def _calcular_fecha_corte(ventana: str, ultima_fecha: pd.Timestamp, primera_fecha: pd.Timestamp) -> pd.Timestamp:
+    if ventana == "Últimos 3 meses":
+        return ultima_fecha - pd.DateOffset(months=3)
+    if ventana == "Últimos 6 meses (Recomendado)":
+        return ultima_fecha - pd.DateOffset(months=6)
+    if ventana == "Último año":
+        return ultima_fecha - pd.DateOffset(years=1)
+    return primera_fecha
+
+
+def _renderizar_grafico_prophet(df_hist_plot, forecast_plot, ultima_fecha_hist, df_futuro, horizon_selection, nombre_estacion, df_hist):
+    fig = go.Figure()
+
+    # 1. Datos históricos observados
+    fig.add_trace(go.Scatter(
+        x=df_hist_plot["ds"], 
+        y=df_hist_plot["y"], 
+        mode="lines", 
+        name="Datos Históricos Reales",
+        line={"color": "#3366CC", "width": 2}
+    ))
+
+    # 2. Ajuste histórico del modelo (línea discontinua)
+    df_ajuste_plot = forecast_plot[forecast_plot["ds"] <= ultima_fecha_hist]
+    if not df_ajuste_plot.empty:
+        fig.add_trace(go.Scatter(
+            x=df_ajuste_plot["ds"], 
+            y=df_ajuste_plot["yhat"], 
+            mode="lines", 
+            name="Ajuste del Modelo", 
+            line={"color": "rgba(255, 127, 14, 0.6)", "dash": "dot", "width": 1.5}
+        ))
+
+    # 3. Pronóstico futuro (destacado con marcadores)
+    if not df_futuro.empty:
+        ultimo_punto = pd.DataFrame({
+            "ds": [ultima_fecha_hist],
+            "yhat": [df_hist[df_hist["ds"] == ultima_fecha_hist]["y"].iloc[0]],
+            "yhat_lower": [df_hist[df_hist["ds"] == ultima_fecha_hist]["y"].iloc[0]],
+            "yhat_upper": [df_hist[df_hist["ds"] == ultima_fecha_hist]["y"].iloc[0]]
+        })
+        df_futuro_plot = pd.concat([ultimo_punto, df_futuro], ignore_index=True)
+
+        fig.add_trace(go.Scatter(
+            x=df_futuro_plot["ds"],
+            y=df_futuro_plot["yhat_upper"],
+            mode="lines",
+            line={"width": 0},
+            showlegend=False,
+            hoverinfo="skip"
+        ))
+        fig.add_trace(go.Scatter(
+            x=df_futuro_plot["ds"],
+            y=df_futuro_plot["yhat_lower"],
+            mode="lines",
+            line={"width": 0},
+            fill="tonexty",
+            fillcolor="rgba(255, 127, 14, 0.25)",
+            name="Intervalo Confianza (95%)",
+        ))
+        fig.add_trace(go.Scatter(
+            x=df_futuro_plot["ds"], 
+            y=df_futuro_plot["yhat"], 
+            mode="lines+markers", 
+            name=f"Pronóstico Futuro ({horizon_selection})", 
+            line={"color": "#FF6F00", "width": 3},
+            marker={"size": 7, "color": "#FF6F00"}
+        ))
+
+    fig.update_layout(
+        title=f"Pronóstico de Temperatura Media - {nombre_estacion} ({horizon_selection})",
+        xaxis_title="Fecha",
+        yaxis_title="Temp. Media (°C)",
+        hovermode="x unified",
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1}
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def _renderizar_tabla_futuro(df_futuro: pd.DataFrame):
+    if df_futuro.empty:
+        return
+    st.markdown("#### 📅 Detalle del Pronóstico de los Próximos Días")
+    dias_semana = {0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves', 4: 'Viernes', 5: 'Sábado', 6: 'Domingo'}
+    df_tabla_futuro = pd.DataFrame({
+        "Fecha": df_futuro["ds"].dt.strftime("%Y-%m-%d"),
+        "Día": df_futuro["ds"].dt.dayofweek.map(dias_semana),
+        "Temp. Prevista (°C)": df_futuro["yhat"].round(1),
+        "Mínima esperada (°C)": df_futuro["yhat_lower"].round(1),
+        "Máxima esperada (°C)": df_futuro["yhat_upper"].round(1)
+    })
+    st.dataframe(df_tabla_futuro, hide_index=True, use_container_width=True)
+
+
+def _renderizar_metricas_ajuste(df_hist: pd.DataFrame, forecast_df: pd.DataFrame):
+    df_merge = pd.merge(df_hist, forecast_df, on="ds", how="inner", validate="one_to_one")
+    if df_merge.empty:
+        return
+
+    y_true = df_merge["y"]
+    y_pred = df_merge["yhat"]
+
+    mae = mean_absolute_error(y_true, y_pred)
+    mse = mean_squared_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred)
+
+    df_metrics = pd.DataFrame([{
+        "MAE (°C)": mae,
+        "RMSE (°C)": np.sqrt(mse),
+        "R²": r2
+    }])
+    st.markdown("#### Métricas de Ajuste Histórico del Modelo")
+    st.dataframe(df_metrics.style.format("{:.2f}"), hide_index=True, use_container_width=True)
+
+
+def _renderizar_descomposicion(model_fitted, forecast_full):
+    with st.expander("📊 Descomposición del Modelo (Tendencia y Ciclo Estacional Anual)"):
+        try:
+            from prophet.plot import plot_components_plotly
+            fig_comp = plot_components_plotly(model_fitted, forecast_full)
+            fig_comp.update_layout(height=450)
+            st.plotly_chart(fig_comp, use_container_width=True)
+        except Exception as e:
+            st.info(f"No se pudo generar el gráfico de descomposición: {e}")
+
+
 # --- Aplicación de Streamlit ---
 
 
 def prophet_page():
-
     st.subheader("Modelo Prophet 🔮 - Predicción de Series Temporales")
-    st.markdown(
-        "Genere un pronóstico con el modelo Prophet para diferentes horizontes de tiempo."
-    )
+    st.markdown("Genere un pronóstico con el modelo Prophet para diferentes horizontes de tiempo.")
 
-    # Obtener estaciones reales de la base de datos
     df_estaciones = obtener_estaciones_para_prediccion()
     if df_estaciones.empty:
         st.error("No se pudieron cargar las estaciones desde la base de datos o los archivos locales.")
+        return
 
-    
-    # --- Controles en la Sidebar ---
     with st.sidebar:
         st.header("Configuración de Predicción")
-        estaciones_dict = pd.Series(df_estaciones.codigo_indicativo.values, index = df_estaciones.nombre_estacion.str.title()).to_dict()
+        estaciones_dict = pd.Series(df_estaciones.codigo_indicativo.values, index=df_estaciones.nombre_estacion.str.title()).to_dict()
         
         nombre_estacion_seleccionada = st.selectbox(
             "Seleccione la Estación a predecir",
@@ -181,192 +302,83 @@ def prophet_page():
             "Seleccione el Horizonte de Predicción", list(horizon_options.keys())
         )
         
-        run_prediction = st.button(f"Generar Predicción para {nombre_estacion_seleccionada}", type = "primary")
+        run_prediction = st.button(f"Generar Predicción para {nombre_estacion_seleccionada}", type="primary")
     
         if st.button("Limpiar Cache de Datos"):
             st.cache_data.clear()
             st.cache_resource.clear()
             st.success("Caché limpiado. Por favor, vuelva a generar la predicción.")
     
-    if run_prediction and nombre_estacion_seleccionada:
-        indicativo_seleccionado = estaciones_dict[nombre_estacion_seleccionada]
-        horizon_key = str(horizon_selection) if horizon_selection else "1 día"
-        periods_to_forecast = horizon_options.get(horizon_key, 1)
-        cluster_id = df_estaciones[df_estaciones['codigo_indicativo'] == indicativo_seleccionado]['cluster'].iloc[0]
+    if not (run_prediction and nombre_estacion_seleccionada):
+        return
 
-        df_hist = load_time_series_data(indicativo_seleccionado)
-        model_preentrenado, _ = load_model_and_metrics_prophet(indicativo_seleccionado, cluster_id)
+    indicativo_seleccionado = estaciones_dict[nombre_estacion_seleccionada]
+    horizon_key = str(horizon_selection) if horizon_selection else "1 día"
+    periods_to_forecast = horizon_options.get(horizon_key, 1)
+    cluster_id = df_estaciones[df_estaciones['codigo_indicativo'] == indicativo_seleccionado]['cluster'].iloc[0]
 
-        tipo_str = str(tipo_ajuste or "")
-        modo_elegido = "estacion" if "Específico" in tipo_str else "cluster"
+    df_hist = load_time_series_data(indicativo_seleccionado)
+    model_preentrenado, _ = load_model_and_metrics_prophet(indicativo_seleccionado, cluster_id)
 
-        with st.spinner(f"Generando predicción de {horizon_selection} para {nombre_estacion_seleccionada}..."):
-            forecast_df, forecast_full, model_fitted = make_prophet_prediction(
-                df=df_hist,
-                periods=periods_to_forecast,
-                m=model_preentrenado,
-                modo=modo_elegido,
-                weekly_seasonality=incluir_semanal,
-                corregir_inercia=corregir_inercia
-            )
+    tipo_str = str(tipo_ajuste or "")
+    modo_elegido = "estacion" if "Específico" in tipo_str else "cluster"
 
-        st.markdown(f"### Resultados para **{nombre_estacion_seleccionada}** (Modelo: Prophet)")
-        if modo_elegido == "estacion":
-            st.caption("⚡ *Modelo ajustado con los datos meteorológicos específicos de esta estación.*")
-        else:
-            st.caption(f"🌐 *Modelo regional precalculado para el Clúster {cluster_id}.*")
-
-        if corregir_inercia:
-            st.caption("🌡️ *Inercia térmica activa: conecta la anomalía atmosférica reciente con la tendencia estacional.*")
-
-        ultima_fecha_hist = df_hist["ds"].max()
-        df_futuro = forecast_df[forecast_df["ds"] > ultima_fecha_hist].copy()
-
-        # Selector de ventana temporal para que el usuario pueda apreciar el pronóstico sin que se comprima
-        ventana_grafico = st.radio(
-            "Ventana temporal a mostrar en el gráfico:",
-            ["Últimos 3 meses", "Últimos 6 meses (Recomendado)", "Último año", "Todo el histórico"],
-            index=1,
-            horizontal=True
+    with st.spinner(f"Generando predicción de {horizon_selection} para {nombre_estacion_seleccionada}..."):
+        forecast_df, forecast_full, model_fitted = make_prophet_prediction(
+            df=df_hist,
+            periods=periods_to_forecast,
+            m=model_preentrenado,
+            modo=modo_elegido,
+            weekly_seasonality=incluir_semanal,
+            corregir_inercia=corregir_inercia
         )
 
-        if ventana_grafico == "Últimos 3 meses":
-            fecha_corte = ultima_fecha_hist - pd.DateOffset(months=3)
-        elif ventana_grafico == "Últimos 6 meses (Recomendado)":
-            fecha_corte = ultima_fecha_hist - pd.DateOffset(months=6)
-        elif ventana_grafico == "Último año":
-            fecha_corte = ultima_fecha_hist - pd.DateOffset(years=1)
-        else:
-            fecha_corte = df_hist["ds"].min()
+    st.markdown(f"### Resultados para **{nombre_estacion_seleccionada}** (Modelo: Prophet)")
+    if modo_elegido == "estacion":
+        st.caption("⚡ *Modelo ajustado con los datos meteorológicos específicos de esta estación.*")
+    else:
+        st.caption(f"🌐 *Modelo regional precalculado para el Clúster {cluster_id}.*")
 
-        df_hist_plot = df_hist[df_hist["ds"] >= fecha_corte]
-        forecast_plot = forecast_df[forecast_df["ds"] >= fecha_corte]
+    if corregir_inercia:
+        st.caption("🌡️ *Inercia térmica activa: conecta la anomalía atmosférica reciente con la tendencia estacional.*")
 
-        # Gráfico interactivo mejorado
-        fig = go.Figure()
+    ultima_fecha_hist = df_hist["ds"].max()
+    df_futuro = forecast_df[forecast_df["ds"] > ultima_fecha_hist].copy()
 
-        # 1. Datos históricos observados
-        fig.add_trace(go.Scatter(
-            x = df_hist_plot["ds"], 
-            y = df_hist_plot["y"], 
-            mode = "lines", 
-            name = "Datos Históricos Reales",
-            line = dict(color = "#3366CC", width = 2)
-        ))
-
-        # 2. Ajuste histórico del modelo (línea discontinua)
-        df_ajuste_plot = forecast_plot[forecast_plot["ds"] <= ultima_fecha_hist]
-        if not df_ajuste_plot.empty:
-            fig.add_trace(go.Scatter(
-                x = df_ajuste_plot["ds"], 
-                y = df_ajuste_plot["yhat"], 
-                mode = "lines", 
-                name = "Ajuste del Modelo", 
-                line = dict(color = "rgba(255, 127, 14, 0.6)", dash = "dot", width = 1.5)
-            ))
-
-        # 3. Pronóstico futuro (destacado con marcadores)
-        if not df_futuro.empty:
-            # Unir con el último punto real para continuidad visual
-            ultimo_punto = pd.DataFrame({
-                "ds": [ultima_fecha_hist],
-                "yhat": [df_hist[df_hist["ds"] == ultima_fecha_hist]["y"].iloc[0]],
-                "yhat_lower": [df_hist[df_hist["ds"] == ultima_fecha_hist]["y"].iloc[0]],
-                "yhat_upper": [df_hist[df_hist["ds"] == ultima_fecha_hist]["y"].iloc[0]]
-            })
-            df_futuro_plot = pd.concat([ultimo_punto, df_futuro], ignore_index=True)
-
-            fig.add_trace(go.Scatter(
-                x = df_futuro_plot["ds"],
-                y = df_futuro_plot["yhat_upper"],
-                mode = "lines",
-                line = dict(width=0),
-                showlegend = False,
-                hoverinfo = "skip"
-            ))
-            fig.add_trace(go.Scatter(
-                x = df_futuro_plot["ds"],
-                y = df_futuro_plot["yhat_lower"],
-                mode = "lines",
-                line = dict(width=0),
-                fill = "tonexty",
-                fillcolor = "rgba(255, 127, 14, 0.25)",
-                name = "Intervalo Confianza (95%)",
-            ))
-            fig.add_trace(go.Scatter(
-                x = df_futuro_plot["ds"], 
-                y = df_futuro_plot["yhat"], 
-                mode = "lines+markers", 
-                name = f"Pronóstico Futuro ({horizon_selection})", 
-                line = dict(color = "#FF6F00", width = 3),
-                marker = dict(size = 7, color = "#FF6F00")
-            ))
-
-        fig.update_layout(
-            title = f"Pronóstico de Temperatura Media - {nombre_estacion_seleccionada} ({horizon_selection})",
-            xaxis_title = "Fecha",
-            yaxis_title = "Temp. Media (°C)",
-            hovermode = "x unified",
-            legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Tabla detallada del pronóstico futuro
-        if not df_futuro.empty:
-            st.markdown("#### 📅 Detalle del Pronóstico de los Próximos Días")
-            dias_semana = {0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves', 4: 'Viernes', 5: 'Sábado', 6: 'Domingo'}
-            df_tabla_futuro = pd.DataFrame({
-                "Fecha": df_futuro["ds"].dt.strftime("%Y-%m-%d"),
-                "Día": df_futuro["ds"].dt.dayofweek.map(dias_semana),
-                "Temp. Prevista (°C)": df_futuro["yhat"].round(1),
-                "Mínima esperada (°C)": df_futuro["yhat_lower"].round(1),
-                "Máxima esperada (°C)": df_futuro["yhat_upper"].round(1)
-            })
-            st.dataframe(df_tabla_futuro, hide_index=True, use_container_width=True)
-
-        # Métricas del ajuste histórico
-        df_merge = pd.merge(df_hist, forecast_df, on="ds", how="inner")
-
-        if not df_merge.empty:
-            y_true = df_merge["y"]
-            y_pred = df_merge["yhat"]
-
-            mae = mean_absolute_error(y_true, y_pred)
-            mse = mean_squared_error(y_true, y_pred)
-            r2 = r2_score(y_true, y_pred)
-
-            df_metrics = pd.DataFrame([{
-                "MAE (°C)": mae,
-                "RMSE (°C)": np.sqrt(mse),
-                "R²": r2
-            }])
-            st.markdown("#### Métricas de Ajuste Histórico del Modelo")
-            st.dataframe(df_metrics.style.format("{:.2f}"), hide_index=True, use_container_width=True)
-
-        # Descomposición de componentes de Prophet
-        with st.expander("📊 Descomposición del Modelo (Tendencia y Ciclo Estacional Anual)"):
-            try:
-                from prophet.plot import plot_components_plotly
-                fig_comp = plot_components_plotly(model_fitted, forecast_full)
-                fig_comp.update_layout(height=450)
-                st.plotly_chart(fig_comp, use_container_width=True)
-            except Exception as e:
-                st.info(f"No se pudo generar el gráfico de descomposición: {e}")
-
-    # --- Sección Explicativa ---
-    st.markdown("---")
-    st.markdown("### ¿Cómo afecta el tiempo a la precisión del modelo?")
-    st.info(
-        """
-        **A corto plazo (ej. 1 día, 1 semana):** Los modelos suelen ser bastante precisos. Se basan en los datos más recientes, que son un buen indicador del futuro inmediato. La incertidumbre es baja.
-
-        **A mediano y largo plazo (ej. 2 semanas, 1 mes):** La precisión tiende a disminuir a medida que aumenta el horizonte de predicción. Esto se debe a varias razones:
-        - **Acumulación de Errores:** Especialmente en modelos como GRU y redes neuronales que predicen de forma recursiva (usando predicciones anteriores para generar nuevas), cualquier pequeño error en una predicción temprana se propaga y magnifica en las predicciones futuras.
-        - **Incertidumbre Creciente:** El futuro es inherentemente incierto. Cuanto más nos alejamos en el tiempo, mayor es la probabilidad de que ocurran eventos imprevistos (cambios en el mercado, nuevos factores no vistos en los datos históricos) que el modelo no puede anticipar.
-        - **Deriva del Modelo (Model Drift):** Las relaciones y patrones en los datos pueden cambiar con el tiempo. Un modelo entrenado con datos de hace un año podría no ser tan efectivo para predecir el comportamiento dentro de un mes si las condiciones subyacentes han cambiado.
-
-        En resumen, **a mayor horizonte de predicción, menor es la confianza y la precisión esperada del modelo.** Los intervalos de confianza (como los que muestra Prophet) se ensanchan visiblemente para reflejar esta creciente incertidumbre.
-        """
+    ventana_grafico = st.radio(
+        "Ventana temporal a mostrar en el gráfico:",
+        ["Últimos 3 meses", "Últimos 6 meses (Recomendado)", "Último año", "Todo el histórico"],
+        index=1,
+        horizontal=True
     )
+    fecha_corte = _calcular_fecha_corte(str(ventana_grafico), ultima_fecha_hist, df_hist["ds"].min())
+
+    df_hist_plot = df_hist[df_hist["ds"] >= fecha_corte]
+    forecast_plot = forecast_df[forecast_df["ds"] >= fecha_corte]
+
+    _renderizar_grafico_prophet(
+        df_hist_plot, forecast_plot, ultima_fecha_hist, df_futuro, 
+        horizon_selection, nombre_estacion_seleccionada, df_hist
+    )
+    _renderizar_tabla_futuro(df_futuro)
+    _renderizar_metricas_ajuste(df_hist, forecast_df)
+    _renderizar_descomposicion(model_fitted, forecast_full)
+
+
+# --- Sección Explicativa ---
+st.markdown("---")
+st.markdown("### ¿Cómo afecta el tiempo a la precisión del modelo?")
+st.info(
+    """
+    **A corto plazo (ej. 1 día, 1 semana):** Los modelos suelen ser bastante precisos. Se basan en los datos más recientes, que son un buen indicador del futuro inmediato. La incertidumbre es baja.
+
+    **A mediano y largo plazo (ej. 2 semanas, 1 mes):** La precisión tiende a disminuir a medida que aumenta el horizonte de predicción. Esto se debe a varias razones:
+    - **Acumulación de Errores:** Especialmente en modelos como GRU y redes neuronales que predicen de forma recursiva (usando predicciones anteriores para generar nuevas), cualquier pequeño error en una predicción temprana se propaga y magnifica en las predicciones futuras.
+    - **Incertidumbre Creciente:** El futuro es inherentemente incierto. Cuanto más nos alejamos en el tiempo, mayor es la probabilidad de que ocurran eventos imprevistos que el modelo no puede anticipar.
+    - **Deriva del Modelo (Model Drift):** Las relaciones y patrones en los datos pueden cambiar con el tiempo. Un modelo entrenado con datos de hace un año podría no ser tan efectivo para predecir el comportamiento dentro de un mes si las condiciones subyacentes han cambiado.
+
+    En resumen, **a mayor horizonte de predicción, menor es la confianza y la precisión esperada del modelo.** Los intervalos de confianza (como los que muestra Prophet) se ensanchan visiblemente para reflejar esta creciente incertidumbre.
+    """
+)
 
 prophet_page()

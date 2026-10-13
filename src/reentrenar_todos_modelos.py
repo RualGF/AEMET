@@ -22,10 +22,14 @@ from keras.callbacks import EarlyStopping
 from prophet import Prophet
 
 
+BANNER_SEPARATOR = "=" * 42
+
+
 def cargar_datos_procesados() -> pd.DataFrame:
     pkl_path = BASE_DIR / "data" / "temperaturas_limpias_10_años_final.pkl"
     logger.info(f"Cargando dataset para entrenamiento desde {pkl_path}...")
     df = pd.read_pickle(pkl_path)
+    assert isinstance(df, pd.DataFrame)
     df["fecha"] = pd.to_datetime(df["fecha"])
     df = df.sort_values(by=["cluster", "fecha"]).reset_index(drop=True)
     return df
@@ -40,7 +44,7 @@ def crear_secuencias(data: pd.DataFrame, target_col: str, window_size: int):
 
     shape = (n_sequences, window_size, n_features)
     strides = (feature_data.strides[0], feature_data.strides[0], feature_data.strides[1])
-    X = np.lib.stride_tricks.as_strided(feature_data, shape=shape, strides=strides)
+    X = np.lib.stride_tricks.as_strided(feature_data, shape=shape, strides=strides)  # NOSONAR
     y = target_data[window_size:]
     return X, y
 
@@ -50,9 +54,9 @@ def entrenar_modelos_gru(df_total: pd.DataFrame, clusters: list[int]):
     Entrena modelos GRU multivariantes (30 días de ventana, 6 features de entrada)
     para cada clúster climático.
     """
-    logger.info("==========================================")
+    logger.info(BANNER_SEPARATOR)
     logger.info("Iniciando entrenamiento de modelos GRU...")
-    logger.info("==========================================")
+    logger.info(BANNER_SEPARATOR)
     
     out_dir = BASE_DIR / "modelos" / "modelos_dl"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -79,10 +83,10 @@ def entrenar_modelos_gru(df_total: pd.DataFrame, clusters: list[int]):
         df_scaled = pd.DataFrame(scaled_values, columns=cols_escalar)
 
         # Secuencias: X (window_size, 6 features), y (tmed)
-        X, y = crear_secuencias(df_scaled, target_col, window_size)
+        X, y = crear_secuencias(df_scaled, target_col, window_size)  # NOSONAR
 
         n_train = int(len(X) * 0.85)
-        X_train, X_val = X[:n_train], X[n_train:]
+        X_train, X_val = X[:n_train], X[n_train:]  # NOSONAR
         y_train, y_val = y[:n_train], y[n_train:]
 
         # Arquitectura GRU compatible con 3_Modelos_DL.py
@@ -123,9 +127,9 @@ def entrenar_modelos_nn(df_total: pd.DataFrame, clusters: list[int]):
     Entrena modelos NN densos univariantes (7 días de ventana de tmed)
     para cada clúster climático.
     """
-    logger.info("==========================================")
+    logger.info(BANNER_SEPARATOR)
     logger.info("Iniciando entrenamiento de modelos NN...")
-    logger.info("==========================================")
+    logger.info(BANNER_SEPARATOR)
     
     out_dir = BASE_DIR / "modelos" / "modelos_dl"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -146,16 +150,16 @@ def entrenar_modelos_nn(df_total: pd.DataFrame, clusters: list[int]):
         scaler = MinMaxScaler()
         scaled_tmed = scaler.fit_transform(df_serie[["tmed"]])
 
-        X_list, y_list = [], []
+        X_list, y_list = [], []  # NOSONAR
         for i in range(len(scaled_tmed) - window_size):
             X_list.append(scaled_tmed[i : i + window_size])
             y_list.append(scaled_tmed[i + window_size, 0])
 
-        X = np.array(X_list)  # (N, 7, 1)
+        X = np.array(X_list)  # (N, 7, 1)  # NOSONAR
         y = np.array(y_list)
 
         n_train = int(len(X) * 0.85)
-        X_train, X_val = X[:n_train], X[n_train:]
+        X_train, X_val = X[:n_train], X[n_train:]  # NOSONAR
         y_train, y_val = y[:n_train], y[n_train:]
 
         model = Sequential([
@@ -191,9 +195,9 @@ def entrenar_modelos_prophet(df_total: pd.DataFrame, clusters: list[int]):
     """
     Entrena y guarda los modelos de Facebook Prophet por clúster climático.
     """
-    logger.info("==========================================")
+    logger.info(BANNER_SEPARATOR)
     logger.info("Iniciando entrenamiento de modelos Prophet...")
-    logger.info("==========================================")
+    logger.info(BANNER_SEPARATOR)
     
     out_dir = BASE_DIR / "modelos" / "prophet"
     out_dir.mkdir(parents=True, exist_ok=True)

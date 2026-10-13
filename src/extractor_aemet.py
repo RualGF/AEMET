@@ -23,8 +23,6 @@ logger = logging.getLogger(__name__)
 
 API_KEY = obtener_api_key()
 
-#API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJydWFsZ2ZAZ21haWwuY29tIiwianRpIjoiN2Q5M2RjMDMtNWY5Yi00YzYwLWJmYTAtNTc2MTNiNDgyZjkxIiwiaXNzIjoiQUVNRVQiLCJpYXQiOjE3NDg0NDQ5MzIsInVzZXJJZCI6IjdkOTNkYzAzLTVmOWItNGM2MC1iZmEwLTU3NjEzYjQ4MmY5MSIsInJvbGUiOiIifQ.lb02yR53ROH4319ZiiHDjel7j_ingoIqmTswzt2d6uc'
-
 hoy = date.today()
 URL_DATOS_DIARIOS = (
     "https://opendata.aemet.es/opendata/api/valores/"
@@ -80,8 +78,8 @@ def obtener_registros_desde_respuesta(datos, codigo):
         if isinstance(registros, str):
             registros = json.loads(registros)
         return registros
-    except Exception as e:
-        logger.error(f"  Error al decodificar JSON para estacion={codigo}: {e}")
+    except Exception:
+        logger.exception(f"  Error al decodificar JSON para estacion={codigo}")
         return None
 
 

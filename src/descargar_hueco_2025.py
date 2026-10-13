@@ -66,7 +66,6 @@ def descargar_hueco_primer_semestre_2025():
 
     # Interpolar huecos que pudieran quedar en estos nuevos datos
     logger.info("Interpolando series temporales por estación...")
-    cols_num = ["tmin", "tmax", "tmed", "prec", "velmedia", "racha", "hrMedia"]
     df_total["prec"] = df_total["prec"].fillna(0.0)
 
     for col in ["tmin", "tmax", "tmed", "velmedia", "racha", "hrMedia"]:
