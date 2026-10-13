@@ -32,7 +32,6 @@ data/checkpoints_descarga/
 # Notebooks de Jupyter
 notebooks/
 *.ipynb
-!notebooks/Extracción y limpieza.ipynb
 
 # Carpetas de datos locales
 data/historico/
